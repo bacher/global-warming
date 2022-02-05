@@ -1,0 +1,14 @@
+{
+  "name": "obj-to-json",
+  "version": "0.1.0",
+  "description": "",
+  "scripts": {
+    "start": "ts-node src/objToJson.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "ts-node": "^10.4.0"
+  }
+}

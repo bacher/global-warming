@@ -1,3 +1,9 @@
+import {Game} from '../Game';
+
 export function App() {
-  return <div>TEST</div>;
+  return (
+    <div>
+      <Game />
+    </div>
+  );
 }
