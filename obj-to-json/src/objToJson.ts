@@ -1,6 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 
+const FLOAT_PRECISION = undefined;
+
 const args = process.argv.slice(2);
 
 const [filename] = args;
@@ -34,12 +36,36 @@ type WavefrontObject = {
   uvs: vec2[];
   normals: vec3[];
   faces: Face[];
+  deduplicated: {
+    vertices: number;
+    normals: number;
+    uvs: number;
+  };
+  caches: {
+    vertices: Map<string, number>;
+    verticesIndex: number;
+    verticesMatch: Map<number, number>;
+    uvs: Map<string, number>;
+    uvsIndex: number;
+    uvsMatch: Map<number, number>;
+    normals: Map<string, number>;
+    normalsIndex: number;
+    normalsMatch: Map<number, number>;
+  };
 };
 
 type Results = {
   mtlLib?: string;
   objects: WavefrontObject[];
 };
+
+function isVec2(arr: number[]): arr is vec2 {
+  return arr.length === 2;
+}
+
+function isVec3(arr: number[]): arr is vec3 {
+  return arr.length === 3;
+}
 
 function parseFacePoint(str: string): FaceVertex {
   const parts = str.split(/\s*\/\s*/).map((part) => {
@@ -73,7 +99,11 @@ function parseFacePoint(str: string): FaceVertex {
   };
 }
 
-function adaptPoint(obj: WavefrontObject, point: FaceVertex, shifts: Shifts) {
+function adaptPoint(
+  obj: WavefrontObject,
+  point: FaceVertex,
+  shifts: Shifts,
+): FaceVertex {
   point.vertex -= shifts.verticesShift;
   if (point.vertex < 0) {
     throw new Error('Invalid face definition');
@@ -93,18 +123,36 @@ function adaptPoint(obj: WavefrontObject, point: FaceVertex, shifts: Shifts) {
     }
   }
 
-  if (point.vertex >= obj.vertices.length) {
-    // console.log('Ver', point.vertex, obj.vertices.length);
-    throw new Error('Face vertex index out of rance');
+  const vertex = obj.caches.verticesMatch.get(point.vertex);
+  let normal;
+  let uv;
+
+  if (vertex === undefined) {
+    console.log('get vertex by', point.vertex);
+    throw new Error('Match is not found');
   }
-  if (point.uv !== undefined && point.uv >= obj.uvs.length) {
-    // console.log('Tex', point.uv, obj.uvs.length);
-    throw new Error('Face texture index out of rance');
+
+  if (point.normal !== undefined) {
+    normal = obj.caches.normalsMatch.get(point.normal);
+    if (normal === undefined) {
+      console.log('get normal by', point.normal);
+      throw new Error('Match is not found');
+    }
   }
-  if (point.normal !== undefined && point.normal >= obj.normals.length) {
-    // console.log('Nor', point.normal, obj.normals.length);
-    throw new Error('Face normal index out of rance');
+
+  if (point.uv !== undefined) {
+    uv = obj.caches.uvsMatch.get(point.uv);
+    if (uv === undefined) {
+      console.log('get uv by', point.uv);
+      throw new Error('Match is not found');
+    }
   }
+
+  return {
+    vertex,
+    normal,
+    uv,
+  };
 }
 
 type Shifts = {
@@ -149,9 +197,9 @@ async function start() {
         break;
       case 'o':
         if (currentObject) {
-          shifts.verticesShift += currentObject.vertices.length;
-          shifts.normalsShift += currentObject.normals.length;
-          shifts.textureShift += currentObject.uvs.length;
+          shifts.verticesShift += currentObject.caches.verticesIndex;
+          shifts.normalsShift += currentObject.caches.normalsIndex;
+          shifts.textureShift += currentObject.caches.uvsIndex;
         }
 
         currentObject = {
@@ -160,7 +208,28 @@ async function start() {
           uvs: [],
           normals: [],
           faces: [],
+          deduplicated: {
+            vertices: 0,
+            normals: 0,
+            uvs: 0,
+          },
+          caches: {
+            vertices: new Map(),
+            verticesIndex: 0,
+            verticesMatch: new Map(),
+            uvs: new Map(),
+            uvsIndex: 0,
+            uvsMatch: new Map(),
+            normals: new Map(),
+            normalsIndex: 0,
+            normalsMatch: new Map(),
+          },
         };
+        Object.defineProperty(currentObject, 'caches', {enumerable: false});
+        Object.defineProperty(currentObject, 'deduplicated', {
+          enumerable: false,
+        });
+
         results.objects.push(currentObject);
         break;
       case 'v':
@@ -170,34 +239,75 @@ async function start() {
           throw new Error('No current object');
         }
 
-        const parts = rest.split(/\s+/).map(Number);
+        const {caches} = currentObject;
+        const parts = rest.split(/\s+/).map((v) => {
+          const num = Number(v);
+
+          if (FLOAT_PRECISION !== undefined) {
+            return Number(num.toFixed(FLOAT_PRECISION));
+          }
+
+          return num;
+        });
 
         if (parts.some((number) => Number.isNaN(number))) {
           throw new Error('Invalid value');
         }
 
+        const serialized = parts.join('|');
+
         switch (command) {
-          case 'v':
-            if (parts.length !== 3) {
+          case 'v': {
+            if (!isVec3(parts)) {
               throw new Error('Invalid vertex');
             }
 
-            currentObject.vertices.push(parts as vec3);
+            const currentIndex = caches.verticesIndex++;
+            let vertexIndex = caches.vertices.get(serialized);
+            if (vertexIndex === undefined) {
+              vertexIndex = currentObject.vertices.length;
+              currentObject.vertices.push(parts);
+              caches.vertices.set(serialized, vertexIndex);
+            } else {
+              currentObject.deduplicated.vertices++;
+            }
+            caches.verticesMatch.set(currentIndex, vertexIndex);
             break;
-          case 'vn':
-            if (parts.length !== 3) {
+          }
+          case 'vn': {
+            if (!isVec3(parts)) {
               throw new Error('Invalid normal');
             }
 
-            currentObject.normals.push(parts as vec3);
+            const currentIndex = caches.normalsIndex++;
+            let normalIndex = caches.normals.get(serialized);
+            if (normalIndex === undefined) {
+              normalIndex = currentObject.normals.length;
+              currentObject.normals.push(parts);
+              caches.normals.set(serialized, normalIndex);
+            } else {
+              currentObject.deduplicated.normals++;
+            }
+            caches.normalsMatch.set(currentIndex, normalIndex);
             break;
-          case 'vt':
-            if (parts.length !== 2) {
+          }
+          case 'vt': {
+            if (!isVec2(parts)) {
               throw new Error('Invalid uv');
             }
 
-            currentObject.uvs.push(parts as vec2);
+            const currentIndex = caches.uvsIndex++;
+            let normalIndex = caches.uvs.get(serialized);
+            if (normalIndex === undefined) {
+              normalIndex = currentObject.uvs.length;
+              currentObject.uvs.push(parts);
+              caches.uvs.set(serialized, normalIndex);
+            } else {
+              currentObject.deduplicated.uvs++;
+            }
+            caches.uvsMatch.set(currentIndex, normalIndex);
             break;
+          }
         }
         break;
       }
@@ -263,8 +373,12 @@ async function start() {
 ${obj.name.padEnd(20)} \
 Vertices: ${obj.vertices.length}, \
 Normals: ${obj.normals.length}, \
-Texture Coords: ${obj.uvs.length}, \
-Faces: ${obj.faces.length}`,
+UVs: ${obj.uvs.length}, \
+Faces: ${obj.faces.length}, \
+Dedupl (v/n/t): \
+${obj.deduplicated.vertices}/\
+${obj.deduplicated.normals}/\
+${obj.deduplicated.uvs}`,
     );
   }
 
