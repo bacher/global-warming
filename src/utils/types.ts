@@ -10,7 +10,12 @@ export type ShaderProgram = {
   };
 };
 
+export type SceneObject = {
+  verticesCount: number;
+};
+
 export type Scene = {
   shaderProgram: ShaderProgram;
   vao: WebGLVertexArrayObject;
+  objects: SceneObject[];
 };

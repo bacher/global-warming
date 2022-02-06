@@ -14,11 +14,10 @@ export function draw(
 
   gl.bindVertexArray(scene.vao);
 
-  // Draw the rectangle.
-  const offset = 0;
-  const count = 6;
-  const indexType = gl.UNSIGNED_SHORT;
-  gl.drawElements(gl.TRIANGLES, count, indexType, offset);
+  for (const obj of scene.objects) {
+    // TODO: Maybe replace by gl.UNSIGNED_INT
+    gl.drawElements(gl.TRIANGLES, obj.verticesCount, gl.UNSIGNED_SHORT, 0);
+  }
 
   console.log('drawn');
 }

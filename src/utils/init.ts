@@ -1,8 +1,11 @@
 import {uniq} from 'lodash-es';
 
-import type {Scene, ShaderInfo, ShaderProgram} from '../utils/types';
+import type {Scene, SceneObject, ShaderInfo, ShaderProgram} from './types';
 import {simpleVertexShaderInfo} from '../shaders/simple.vertex';
 import {simpleFragmentShaderInfo} from '../shaders/simple.fragment';
+import earch from '../assets/earth.json';
+
+console.log(earch);
 
 function createShader(
   gl: WebGL2RenderingContext,
@@ -56,7 +59,7 @@ function createShaderProgram(
 
   const success = gl.getProgramParameter(program, gl.LINK_STATUS);
   if (!success) {
-    console.log(gl.getProgramInfoLog(program));
+    console.error(gl.getProgramInfoLog(program));
     gl.deleteProgram(program);
     throw new Error('Invalid program shaders');
   }
@@ -96,7 +99,10 @@ function createShaderProgram(
   };
 }
 
-export function createBuffers(gl: WebGL2RenderingContext): {
+export function createBuffers(
+  gl: WebGL2RenderingContext,
+  objects: SceneObject[],
+): {
   positionBuffer: WebGLBuffer;
   indexBuffer: WebGLBuffer;
 } {
@@ -108,30 +114,16 @@ export function createBuffers(gl: WebGL2RenderingContext): {
 
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-  const x = 0;
-  const y = 0;
-  const width = 1;
-  const height = 1;
+  const floatArray = new Float32Array(earch.vertices.length * 3);
 
-  const x1 = x;
-  const x2 = x + width;
-  const y1 = y;
-  const y2 = y + height;
+  for (let i = 0; i < earch.vertices.length; i++) {
+    let vertex = earch.vertices[i];
+    vertex[2] = 0;
+    vertex = vertex.map((v) => v / 10);
+    floatArray.set(vertex, i * 3);
+  }
 
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array([
-      x1,
-      y1, // vertex 0
-      x2,
-      y1, // vertex 1
-      x1,
-      y2, // vertex 2
-      x2,
-      y2, // vertex 3
-    ]),
-    gl.STATIC_DRAW,
-  );
+  gl.bufferData(gl.ARRAY_BUFFER, floatArray, gl.STATIC_DRAW);
 
   // Index buffer initialization
   const indexBuffer = gl.createBuffer();
@@ -142,12 +134,25 @@ export function createBuffers(gl: WebGL2RenderingContext): {
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
-  const indices = [0, 1, 2, 2, 1, 3];
+  const indexArray = new Uint16Array(earch.faces.length * 3);
+
+  for (let i = 0; i < earch.faces.length; i++) {
+    const face = earch.faces[i];
+    indexArray.set(
+      face.map((point) => point.vertex),
+      i * 3,
+    );
+  }
+
   gl.bufferData(
     gl.ELEMENT_ARRAY_BUFFER,
-    new Uint16Array(indices),
+    new Uint16Array(indexArray),
     gl.STATIC_DRAW,
   );
+
+  objects.push({
+    verticesCount: indexArray.length,
+  });
 
   return {
     positionBuffer,
@@ -168,7 +173,7 @@ export function createVao(
   gl.bindVertexArray(vao);
   gl.enableVertexAttribArray(positionAttributeLocation);
 
-  const size = 2; // 2 components per iteration
+  const size = 3; // 3 components per iteration
   const type = gl.FLOAT; // the data is 32bit floats
   const normalize = false; // don't normalize the data
   const stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
@@ -192,7 +197,9 @@ export function initialize(gl: WebGL2RenderingContext): Scene {
     simpleFragmentShaderInfo,
   );
 
-  const {indexBuffer, positionBuffer} = createBuffers(gl);
+  const objects: SceneObject[] = [];
+
+  const {indexBuffer, positionBuffer} = createBuffers(gl, objects);
 
   const vao = createVao(
     gl,
@@ -209,5 +216,6 @@ export function initialize(gl: WebGL2RenderingContext): Scene {
   return {
     shaderProgram,
     vao,
+    objects,
   };
 }
