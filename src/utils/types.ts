@@ -1,12 +1,19 @@
-export type ShaderInfo = {
+export type VertexShaderInfo = {
   source: string;
+  uniforms: string[];
   attributes: string[];
+};
+
+export type FragmentShaderInfo = {
+  source: string;
+  uniforms: string[];
 };
 
 export type ShaderProgram = {
   program: WebGLProgram;
   locations: {
-    getAttributeLocation: (attrName: string) => number;
+    getUniformLocation: (uniformName: string) => WebGLUniformLocation;
+    getAttributeLocation: (attributeName: string) => number;
   };
 };
 

@@ -1,6 +1,6 @@
-import type {ShaderInfo} from '../utils/types';
+import type {FragmentShaderInfo} from '../utils/types';
 
-export const simpleFragmentShaderInfo: ShaderInfo = {
+export const simpleFragmentShaderInfo: FragmentShaderInfo = {
   source: `#version 300 es
 
 // fragment shaders don't have a default precision so we need
@@ -13,5 +13,5 @@ void main() {
     outColor = vec4(1, 0, 0.5, 1);
 }
 `,
-  attributes: [],
+  uniforms: [],
 };

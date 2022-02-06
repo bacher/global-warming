@@ -1,9 +1,15 @@
 import {uniq} from 'lodash-es';
 
-import type {Scene, SceneObject, ShaderInfo, ShaderProgram} from './types';
+import type {
+  Scene,
+  SceneObject,
+  VertexShaderInfo,
+  ShaderProgram,
+} from './types';
 import {simpleVertexShaderInfo} from '../shaders/simple.vertex';
 import {simpleFragmentShaderInfo} from '../shaders/simple.fragment';
 import earch from '../assets/earth.json';
+import {FragmentShaderInfo} from './types';
 
 console.log(earch);
 
@@ -32,8 +38,8 @@ function createShader(
 
 function createShaderProgram(
   gl: WebGL2RenderingContext,
-  vertexShaderInfo: ShaderInfo,
-  fragmentShaderInfo: ShaderInfo,
+  vertexShaderInfo: VertexShaderInfo,
+  fragmentShaderInfo: FragmentShaderInfo,
 ): ShaderProgram {
   const vertexShader = createShader(
     gl,
@@ -64,14 +70,15 @@ function createShaderProgram(
     throw new Error('Invalid program shaders');
   }
 
-  const attributesList = uniq([
-    ...vertexShaderInfo.attributes,
-    ...fragmentShaderInfo.attributes,
+  const attributes: Record<string, number> = {};
+  const uniforms: Record<string, WebGLUniformLocation> = {};
+
+  const allUniforms = uniq([
+    ...vertexShaderInfo.uniforms,
+    ...fragmentShaderInfo.uniforms,
   ]);
 
-  const attributes: Record<string, number> = {};
-
-  for (const attributeName of attributesList) {
+  for (const attributeName of vertexShaderInfo.attributes) {
     const location = gl.getAttribLocation(program, attributeName);
 
     if (location === -1) {
@@ -79,6 +86,15 @@ function createShaderProgram(
     }
 
     attributes[attributeName] = location;
+  }
+  for (const uniformName of allUniforms) {
+    const location = gl.getUniformLocation(program, uniformName);
+
+    if (!location) {
+      throw new Error('Uniform is not found');
+    }
+
+    uniforms[uniformName] = location;
   }
 
   function getAttributeLocation(attributeName: string): number {
@@ -91,9 +107,20 @@ function createShaderProgram(
     return location;
   }
 
+  function getUniformLocation(uniformName: string): WebGLUniformLocation {
+    const location = uniforms[uniformName];
+
+    if (location === undefined) {
+      throw new Error('Invalid uniform');
+    }
+
+    return location;
+  }
+
   return {
     program,
     locations: {
+      getUniformLocation,
       getAttributeLocation,
     },
   };

@@ -1,6 +1,6 @@
-import type {ShaderInfo} from '../utils/types';
+import type {VertexShaderInfo} from '../utils/types';
 
-export const simpleVertexShaderInfo: ShaderInfo = {
+export const simpleVertexShaderInfo: VertexShaderInfo = {
   source: `#version 300 es
 
 // an attribute is an input (in) to a vertex shader.
@@ -12,5 +12,6 @@ void main() {
   gl_Position = a_position;
 }
 `,
+  uniforms: [],
   attributes: ['a_position'],
 };
