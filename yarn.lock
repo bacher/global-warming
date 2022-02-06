@@ -2370,6 +2370,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/lodash-es@npm:^4.17.5":
+  version: 4.17.5
+  resolution: "@types/lodash-es@npm:4.17.5"
+  dependencies:
+    "@types/lodash": "*"
+  checksum: 8910f646310aa008bb45071619fe85abf917bbc2c7cc0af883a971de261723247695a58dd966bfa9defd946cef79811d8b075eb6f0af12343080ab0ae6614e12
+  languageName: node
+  linkType: hard
+
+"@types/lodash@npm:*":
+  version: 4.14.178
+  resolution: "@types/lodash@npm:4.14.178"
+  checksum: a69a04a60bfc5257c3130a554b4efa0c383f0141b7b3db8ab7cf07ad2a46ea085fce66d0242da41da7e5647b133d5dfb2c15add9cbed8d7fef955e4a1e5b3128
+  languageName: node
+  linkType: hard
+
 "@types/mime@npm:^1":
   version: 1.3.2
   resolution: "@types/mime@npm:1.3.2"
@@ -5950,9 +5966,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "global-warming@workspace:."
   dependencies:
+    "@types/lodash-es": ^4.17.5
     "@types/node": ^16.11.22
     "@types/react": ^17.0.39
     "@types/react-dom": ^17.0.11
+    lodash-es: ^4.17.21
     prettier: ^2.5.1
     react: ^17.0.2
     react-dom: ^17.0.2
@@ -7636,6 +7654,13 @@ __metadata:
   dependencies:
     p-locate: ^5.0.0
   checksum: 72eb661788a0368c099a184c59d2fee760b3831c9c1c33955e8a19ae4a21b4116e53fa736dc086cdeb9fce9f7cc508f2f92d2d3aae516f133e16a2bb59a39f5a
+  languageName: node
+  linkType: hard
+
+"lodash-es@npm:^4.17.21":
+  version: 4.17.21
+  resolution: "lodash-es@npm:4.17.21"
+  checksum: 05cbffad6e2adbb331a4e16fbd826e7faee403a1a04873b82b42c0f22090f280839f85b95393f487c1303c8a3d2a010048bf06151a6cbe03eee4d388fb0a12d2
   languageName: node
   linkType: hard
 

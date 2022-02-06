@@ -1,5 +1,6 @@
 import {useEffect, useRef} from 'react';
 
+import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
 
 const WIDTH = 800;
@@ -21,7 +22,9 @@ export function Game() {
       throw new Error();
     }
 
-    draw(gl, {width: WIDTH, height: HEIGHT});
+    const scene = initialize(gl);
+
+    draw(gl, scene, {width: WIDTH, height: HEIGHT});
   }, []);
 
   return <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} />;
