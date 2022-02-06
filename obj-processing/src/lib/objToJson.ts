@@ -1,41 +1,7 @@
-import fs from 'fs/promises';
-import path from 'path';
+import type {Face, FaceVertex, JSONResults, WavefrontObject} from './types';
+import {isVec2, isVec3} from './utils';
 
-const FLOAT_PRECISION = undefined;
-
-const args = process.argv.slice(2);
-
-const [filename] = args;
-
-if (!filename) {
-  console.info('No filename');
-  process.exit(1);
-}
-
-const outFileName = path.join(
-  path.dirname(filename),
-  `${path.basename(filename, '.obj')}.json`,
-);
-
-type vec2 = [number, number];
-type vec3 = [number, number, number];
-
-type FaceVertex = {
-  vertex: number;
-  uv?: number;
-  normal?: number;
-};
-
-type Face = [FaceVertex, FaceVertex, FaceVertex];
-
-type WavefrontObject = {
-  name: string;
-  mtl?: string;
-  smoothShading?: number | string;
-  vertices: vec3[];
-  uvs: vec2[];
-  normals: vec3[];
-  faces: Face[];
+type WavefrontObjectInner = WavefrontObject & {
   deduplicated: {
     vertices: number;
     normals: number;
@@ -54,18 +20,10 @@ type WavefrontObject = {
   };
 };
 
-type Results = {
+type JSONResultsTemp = {
   mtlLib?: string;
-  objects: WavefrontObject[];
+  objects: WavefrontObjectInner[];
 };
-
-function isVec2(arr: number[]): arr is vec2 {
-  return arr.length === 2;
-}
-
-function isVec3(arr: number[]): arr is vec3 {
-  return arr.length === 3;
-}
 
 function parseFacePoint(str: string): FaceVertex {
   const parts = str.split(/\s*\/\s*/).map((part) => {
@@ -100,7 +58,7 @@ function parseFacePoint(str: string): FaceVertex {
 }
 
 function adaptPoint(
-  obj: WavefrontObject,
+  obj: WavefrontObjectInner,
   point: FaceVertex,
   shifts: Shifts,
 ): FaceVertex {
@@ -161,20 +119,26 @@ type Shifts = {
   normalsShift: number;
 };
 
-async function start() {
-  const objFile = await fs.readFile(filename, 'utf-8');
+export type Options = {
+  precision?: number;
+  filter?: string;
+};
 
+export function objToJson(
+  objFile: string,
+  {precision, filter}: Options,
+): JSONResults {
   const lines = objFile
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => !line.startsWith('#'));
 
-  const results: Results = {
+  const results: JSONResultsTemp = {
     mtlLib: undefined,
     objects: [],
   };
 
-  let currentObject: WavefrontObject | undefined;
+  let currentObject: WavefrontObjectInner | undefined;
 
   const shifts: Shifts = {
     verticesShift: 0,
@@ -243,8 +207,8 @@ async function start() {
         const parts = rest.split(/\s+/).map((v) => {
           const num = Number(v);
 
-          if (FLOAT_PRECISION !== undefined) {
-            return Number(num.toFixed(FLOAT_PRECISION));
+          if (precision !== undefined) {
+            return Number(num.toFixed(precision));
           }
 
           return num;
@@ -363,31 +327,33 @@ async function start() {
     }
   }
 
-  if (!results.objects.length) {
+  let filteredObjects = results.objects;
+
+  if (filter) {
+    filteredObjects = filteredObjects.filter(({name}) => name === filter);
+  }
+
+  if (!filteredObjects.length) {
     throw new Error('No objects found');
   }
 
   for (const obj of results.objects) {
-    console.log(
-      `[Object] \
-${obj.name.padEnd(20)} \
-Vertices: ${obj.vertices.length}, \
+    const details = filteredObjects.includes(obj)
+      ? `Vertices: ${obj.vertices.length}, \
 Normals: ${obj.normals.length}, \
 UVs: ${obj.uvs.length}, \
 Faces: ${obj.faces.length}, \
 Dedupl (v/n/t): \
 ${obj.deduplicated.vertices}/\
 ${obj.deduplicated.normals}/\
-${obj.deduplicated.uvs}`,
-    );
+${obj.deduplicated.uvs}`
+      : 'SKIP';
+
+    console.log(`[Object] ${obj.name.padEnd(20)} ${details}`);
   }
 
-  await fs.writeFile(outFileName, JSON.stringify(results));
-
-  console.info('Model have been written into file:', outFileName);
+  return {
+    mtlLib: results.mtlLib,
+    objects: filteredObjects,
+  };
 }
-
-start().catch((error) => {
-  console.error(error);
-  process.exit(2);
-});
