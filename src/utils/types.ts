@@ -12,8 +12,8 @@ export type FragmentShaderInfo = {
 export type ShaderProgram = {
   program: WebGLProgram;
   locations: {
-    getUniformLocation: (uniformName: string) => WebGLUniformLocation;
-    getAttributeLocation: (attributeName: string) => number;
+    getUniform: (uniformName: string) => WebGLUniformLocation | null;
+    getAttribute: (attributeName: string) => number;
   };
 };
 

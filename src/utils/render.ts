@@ -1,3 +1,5 @@
+import {mat4} from 'gl-matrix';
+
 import type {Scene} from './types';
 
 type Options = {
@@ -13,6 +15,15 @@ export function draw(
   gl.clear(gl.COLOR_BUFFER_BIT);
 
   gl.bindVertexArray(scene.vao);
+
+  const matrix = mat4.create();
+  mat4.scale(matrix, matrix, [1 / 10, 1 / 10, 1 / 10]);
+
+  gl.uniformMatrix4fv(
+    scene.shaderProgram.locations.getUniform('u_matrix'),
+    false,
+    matrix,
+  );
 
   for (const obj of scene.objects) {
     // TODO: Maybe replace by gl.UNSIGNED_INT

@@ -6,7 +6,7 @@ import type {
   VertexShaderInfo,
   ShaderProgram,
 } from './types';
-import {simpleVertexShaderInfo} from '../shaders/simple.vertex';
+import {matrixVertexShaderInfo} from '../shaders/matrix.vertex';
 import {simpleFragmentShaderInfo} from '../shaders/simple.fragment';
 import earch from '../assets/earth.json';
 import {FragmentShaderInfo} from './types';
@@ -71,7 +71,7 @@ function createShaderProgram(
   }
 
   const attributes: Record<string, number> = {};
-  const uniforms: Record<string, WebGLUniformLocation> = {};
+  const uniforms: Record<string, WebGLUniformLocation | null> = {};
 
   const allUniforms = uniq([
     ...vertexShaderInfo.uniforms,
@@ -91,13 +91,14 @@ function createShaderProgram(
     const location = gl.getUniformLocation(program, uniformName);
 
     if (!location) {
-      throw new Error('Uniform is not found');
+      // throw new Error('Uniform is not found');
+      console.warn(`Uniform "${uniformName} doesn't using`);
     }
 
     uniforms[uniformName] = location;
   }
 
-  function getAttributeLocation(attributeName: string): number {
+  function getAttribute(attributeName: string): number {
     const location = attributes[attributeName];
 
     if (location === undefined) {
@@ -107,7 +108,7 @@ function createShaderProgram(
     return location;
   }
 
-  function getUniformLocation(uniformName: string): WebGLUniformLocation {
+  function getUniform(uniformName: string): WebGLUniformLocation | null {
     const location = uniforms[uniformName];
 
     if (location === undefined) {
@@ -120,8 +121,8 @@ function createShaderProgram(
   return {
     program,
     locations: {
-      getUniformLocation,
-      getAttributeLocation,
+      getUniform,
+      getAttribute,
     },
   };
 }
@@ -144,9 +145,7 @@ export function createBuffers(
   const floatArray = new Float32Array(earch.vertices.length * 3);
 
   for (let i = 0; i < earch.vertices.length; i++) {
-    let vertex = earch.vertices[i];
-    vertex[2] = 0;
-    vertex = vertex.map((v) => v / 10);
+    const vertex = earch.vertices[i];
     floatArray.set(vertex, i * 3);
   }
 
@@ -220,7 +219,7 @@ export function createVao(
 export function initialize(gl: WebGL2RenderingContext): Scene {
   const shaderProgram = createShaderProgram(
     gl,
-    simpleVertexShaderInfo,
+    matrixVertexShaderInfo,
     simpleFragmentShaderInfo,
   );
 
@@ -228,10 +227,7 @@ export function initialize(gl: WebGL2RenderingContext): Scene {
 
   const {indexBuffer, positionBuffer} = createBuffers(gl, objects);
 
-  const vao = createVao(
-    gl,
-    shaderProgram.locations.getAttributeLocation('a_position'),
-  );
+  const vao = createVao(gl, shaderProgram.locations.getAttribute('a_position'));
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
