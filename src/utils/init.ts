@@ -4,14 +4,12 @@ import type {
   Scene,
   SceneObject,
   VertexShaderInfo,
+  FragmentShaderInfo,
   ShaderProgram,
 } from './types';
+import type {ModelBufferData} from './binary';
 import {matrixVertexShaderInfo} from '../shaders/matrix.vertex';
 import {simpleFragmentShaderInfo} from '../shaders/simple.fragment';
-import earch from '../assets/earth.json';
-import {FragmentShaderInfo} from './types';
-
-console.log(earch);
 
 function createShader(
   gl: WebGL2RenderingContext,
@@ -129,6 +127,7 @@ function createShaderProgram(
 
 export function createBuffers(
   gl: WebGL2RenderingContext,
+  modelData: ModelBufferData,
   objects: SceneObject[],
 ): {
   positionBuffer: WebGLBuffer;
@@ -142,14 +141,16 @@ export function createBuffers(
 
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
+  /*
   const floatArray = new Float32Array(earch.vertices.length * 3);
 
   for (let i = 0; i < earch.vertices.length; i++) {
     const vertex = earch.vertices[i];
     floatArray.set(vertex, i * 3);
   }
+   */
 
-  gl.bufferData(gl.ARRAY_BUFFER, floatArray, gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, modelData.positionData, gl.STATIC_DRAW);
 
   // Index buffer initialization
   const indexBuffer = gl.createBuffer();
@@ -160,6 +161,7 @@ export function createBuffers(
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
+  /*
   const indexArray = new Uint16Array(earch.faces.length * 3);
 
   for (let i = 0; i < earch.faces.length; i++) {
@@ -169,15 +171,14 @@ export function createBuffers(
       i * 3,
     );
   }
+   */
 
-  gl.bufferData(
-    gl.ELEMENT_ARRAY_BUFFER,
-    new Uint16Array(indexArray),
-    gl.STATIC_DRAW,
-  );
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, modelData.indexData, gl.STATIC_DRAW);
+
+  console.log('a', modelData.indexData.length, modelData.facesCount * 3);
 
   objects.push({
-    verticesCount: indexArray.length,
+    verticesCount: modelData.facesCount * 3,
   });
 
   return {
@@ -216,7 +217,10 @@ export function createVao(
   return vao;
 }
 
-export function initialize(gl: WebGL2RenderingContext): Scene {
+export function initialize(
+  gl: WebGL2RenderingContext,
+  modelData: ModelBufferData,
+): Scene {
   const shaderProgram = createShaderProgram(
     gl,
     matrixVertexShaderInfo,
@@ -225,7 +229,7 @@ export function initialize(gl: WebGL2RenderingContext): Scene {
 
   const objects: SceneObject[] = [];
 
-  const {indexBuffer, positionBuffer} = createBuffers(gl, objects);
+  const {indexBuffer, positionBuffer} = createBuffers(gl, modelData, objects);
 
   const vao = createVao(gl, shaderProgram.locations.getAttribute('a_position'));
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);

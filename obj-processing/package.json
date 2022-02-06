@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "description": "",
   "scripts": {
-    "obj-to-json": "ts-node src/objToJson.ts",
-    "json-to-binary": "ts-node src/jsonToBinary.ts"
+    "obj-to-json": "ts-node src/obj-to-json.ts",
+    "json-to-binary": "ts-node src/json-to-binary.ts"
   },
   "keywords": [],
   "author": "",

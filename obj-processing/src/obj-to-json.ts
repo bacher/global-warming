@@ -40,7 +40,7 @@ async function start() {
   }
 
   if (!fileName) {
-    console.info('No file name');
+    console.error('No file name');
     process.exit(1);
     return;
   }
@@ -53,11 +53,11 @@ async function start() {
   const objFile = await fs.readFile(fileName, 'utf-8');
 
   if (precision !== undefined) {
-    console.log('Precision:', precision);
+    console.info('Precision:', precision);
   }
 
   if (filter) {
-    console.log(`Filter: "${filter}"`);
+    console.info(`Filter: "${filter}"`);
   }
 
   const results = objToJson(objFile, {
@@ -71,6 +71,6 @@ async function start() {
 }
 
 start().catch((error) => {
-  console.error(error);
-  process.exit(2);
+  console.error('Critical Error:', error);
+  process.exit(10);
 });
