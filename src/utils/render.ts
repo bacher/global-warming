@@ -17,7 +17,14 @@ export function draw(
   gl.bindVertexArray(scene.vao);
 
   const matrix = mat4.create();
-  mat4.scale(matrix, matrix, [1 / 10, 1 / 10, 1 / 10]);
+  mat4.perspective(
+    matrix,
+    Math.PI / 2,
+    options.width / options.height,
+    0.001,
+    1000,
+  );
+  mat4.translate(matrix, matrix, [0, 0, -6]);
 
   gl.uniformMatrix4fv(
     scene.shaderProgram.locations.getUniform('u_matrix'),
