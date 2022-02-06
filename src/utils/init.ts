@@ -7,9 +7,10 @@ import type {
   FragmentShaderInfo,
   ShaderProgram,
 } from './types';
-import type {ModelBufferData} from './binary';
+import type {ModelData} from './binary';
 import {matrixVertexShaderInfo} from '../shaders/matrix.vertex';
-import {simpleFragmentShaderInfo} from '../shaders/simple.fragment';
+import {textureFragmentShaderInfo} from '../shaders/texture.fragment';
+import type {Assets} from './loader';
 
 function createShader(
   gl: WebGL2RenderingContext,
@@ -127,55 +128,37 @@ function createShaderProgram(
 
 export function createBuffers(
   gl: WebGL2RenderingContext,
-  modelData: ModelBufferData,
+  modelData: ModelData,
   objects: SceneObject[],
 ): {
   positionBuffer: WebGLBuffer;
+  uvBuffer: WebGLBuffer;
   indexBuffer: WebGLBuffer;
 } {
   const positionBuffer = gl.createBuffer();
-
   if (!positionBuffer) {
     throw new Error('Cant create buffer');
   }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-  /*
-  const floatArray = new Float32Array(earch.vertices.length * 3);
-
-  for (let i = 0; i < earch.vertices.length; i++) {
-    const vertex = earch.vertices[i];
-    floatArray.set(vertex, i * 3);
-  }
-   */
-
   gl.bufferData(gl.ARRAY_BUFFER, modelData.positionData, gl.STATIC_DRAW);
+
+  const uvBuffer = gl.createBuffer();
+  if (!uvBuffer) {
+    throw new Error('Cant create buffer');
+  }
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, modelData.uvData, gl.STATIC_DRAW);
 
   // Index buffer initialization
   const indexBuffer = gl.createBuffer();
-
   if (!indexBuffer) {
     throw new Error('Cant created buffer');
   }
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-
-  /*
-  const indexArray = new Uint16Array(earch.faces.length * 3);
-
-  for (let i = 0; i < earch.faces.length; i++) {
-    const face = earch.faces[i];
-    indexArray.set(
-      face.map((point) => point.vertex),
-      i * 3,
-    );
-  }
-   */
-
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, modelData.indexData, gl.STATIC_DRAW);
-
-  console.log('a', modelData.indexData.length, modelData.facesCount * 3);
 
   objects.push({
     verticesCount: modelData.facesCount * 3,
@@ -183,62 +166,111 @@ export function createBuffers(
 
   return {
     positionBuffer,
+    uvBuffer,
     indexBuffer,
   };
 }
 
+function createTexture(
+  gl: WebGL2RenderingContext,
+  textureImage: HTMLImageElement,
+): WebGLTexture {
+  const texture = gl.createTexture();
+  if (!texture) {
+    throw new Error('Cant create texture');
+  }
+
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    textureImage,
+  );
+  gl.generateMipmap(gl.TEXTURE_2D);
+
+  return texture;
+}
+
+type AttributesInfo = {
+  location: number;
+  buffer: WebGLBuffer;
+};
+
 export function createVao(
   gl: WebGL2RenderingContext,
-  positionAttributeLocation: number,
+  {
+    position,
+    uv,
+  }: {
+    position: AttributesInfo;
+    uv: AttributesInfo;
+  },
 ): WebGLVertexArrayObject {
   const vao = gl.createVertexArray();
-
   if (!vao) {
     throw new Error('Cant create VAO');
   }
 
   gl.bindVertexArray(vao);
-  gl.enableVertexAttribArray(positionAttributeLocation);
 
-  const size = 3; // 3 components per iteration
-  const type = gl.FLOAT; // the data is 32bit floats
-  const normalize = false; // don't normalize the data
-  const stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
-  const offset = 0; // start at the beginning of the buffer
-  gl.vertexAttribPointer(
-    positionAttributeLocation,
-    size,
-    type,
-    normalize,
-    stride,
-    offset,
-  );
+  gl.bindBuffer(gl.ARRAY_BUFFER, position.buffer);
+  gl.enableVertexAttribArray(position.location);
+  gl.vertexAttribPointer(position.location, 3, gl.FLOAT, false, 0, 0);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, uv.buffer);
+  gl.enableVertexAttribArray(uv.location);
+  gl.vertexAttribPointer(uv.location, 2, gl.FLOAT, false, 0, 0);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
   return vao;
 }
 
 export function initialize(
   gl: WebGL2RenderingContext,
-  modelData: ModelBufferData,
+  {modelData, textureImage}: Assets,
 ): Scene {
   const shaderProgram = createShaderProgram(
     gl,
     matrixVertexShaderInfo,
-    simpleFragmentShaderInfo,
+    textureFragmentShaderInfo,
   );
 
   const objects: SceneObject[] = [];
 
-  const {indexBuffer, positionBuffer} = createBuffers(gl, modelData, objects);
+  const {indexBuffer, positionBuffer, uvBuffer} = createBuffers(
+    gl,
+    modelData,
+    objects,
+  );
 
-  const vao = createVao(gl, shaderProgram.locations.getAttribute('a_position'));
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  const texture = createTexture(gl, textureImage);
+
+  const vao = createVao(gl, {
+    position: {
+      location: shaderProgram.locations.getAttribute('a_position'),
+      buffer: positionBuffer,
+    },
+    uv: {
+      location: shaderProgram.locations.getAttribute('a_texcoord'),
+      buffer: uvBuffer,
+    },
+  });
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
 
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clearColor(0, 0, 0, 1);
+  // gl.clearDepth(0);
 
   gl.useProgram(shaderProgram.program);
+
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.FRONT);
+  gl.enable(gl.DEPTH_TEST);
 
   return {
     shaderProgram,

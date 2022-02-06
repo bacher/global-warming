@@ -2,30 +2,22 @@ import {useEffect, useRef, useState} from 'react';
 
 import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
-import {ModelBufferData, parseBinModel} from '../../utils/binary';
+import {Assets, loadAssets} from '../../utils/loader';
 
 const WIDTH = 800;
 const HEIGHT = 600;
 
 export function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [modelData, setModelBuffers] = useState<ModelBufferData | undefined>();
+  const [assets, setAssets] = useState<Assets | undefined>();
+  const timeRef = useRef(0);
 
   useEffect(() => {
-    fetch('/earth.bin')
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error();
-        }
-        return response.arrayBuffer();
-      })
-      .then((buffer) => {
-        setModelBuffers(parseBinModel(buffer));
-      });
+    loadAssets().then(setAssets);
   }, []);
 
   useEffect(() => {
-    if (!modelData) {
+    if (!assets) {
       return;
     }
 
@@ -41,10 +33,21 @@ export function Game() {
       throw new Error();
     }
 
-    const scene = initialize(gl, modelData);
+    const scene = initialize(gl, assets);
 
-    draw(gl, scene, {width: WIDTH, height: HEIGHT});
-  }, [modelData]);
+    timeRef.current = Date.now();
+
+    function doRender() {
+      draw(gl!, scene, {
+        width: WIDTH,
+        height: HEIGHT,
+        time: Date.now() - timeRef.current,
+      });
+      requestAnimationFrame(doRender);
+    }
+
+    doRender();
+  }, [assets]);
 
   return <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} />;
 }

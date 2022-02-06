@@ -1,4 +1,4 @@
-export type ModelBufferData = {
+export type ModelData = {
   facesCount: number;
   positionData: Float32Array;
   normalData: Float32Array;
@@ -6,7 +6,7 @@ export type ModelBufferData = {
   indexData: Uint16Array;
 };
 
-export function parseBinModel(buffer: ArrayBuffer): ModelBufferData {
+export function parseBinModel(buffer: ArrayBuffer): ModelData {
   console.log('buffer', buffer);
 
   const headerSize = 8;
