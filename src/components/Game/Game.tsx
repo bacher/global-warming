@@ -58,6 +58,7 @@ export function Game() {
     <div>
       <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} />
       <span ref={fpsCounterRef} className={styles.fpsCounter} />
+      <pre id="output" className={styles.output}/>
     </div>
   );
 }

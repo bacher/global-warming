@@ -6,3 +6,10 @@
   pointer-events: none;
   user-select: none;
 }
+
+.output {
+  position: fixed;
+  top: 20px;
+  right: 0;
+  margin: 0;
+}

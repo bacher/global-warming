@@ -1,16 +1,18 @@
 import {uniq} from 'lodash-es';
 
 import type {
+  FragmentShaderInfo,
   Scene,
   SceneObject,
-  VertexShaderInfo,
-  FragmentShaderInfo,
   ShaderProgram,
+  VertexShaderInfo,
 } from './types';
+import {RenderType} from './types';
 import type {ModelData} from './binary';
 import {matrixVertexShaderInfo} from '../shaders/matrix.vertex';
 import {textureFragmentShaderInfo} from '../shaders/texture.fragment';
 import type {Assets} from './loader';
+import {simpleFragmentShaderInfo} from '../shaders/simple.fragment';
 
 function createShader(
   gl: WebGL2RenderingContext,
@@ -161,7 +163,10 @@ export function createBuffers(
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, modelData.indexData, gl.STATIC_DRAW);
 
   objects.push({
-    verticesCount: modelData.facesCount * 3,
+    renderType: RenderType.DRAW_ELEMENTS,
+    renderMode: gl.TRIANGLES,
+    indexType: gl.UNSIGNED_SHORT,
+    elementsCount: modelData.facesCount * 3,
   });
 
   return {
@@ -169,6 +174,21 @@ export function createBuffers(
     uvBuffer,
     indexBuffer,
   };
+}
+
+function createLineBuffer(
+  gl: WebGL2RenderingContext,
+  data: BufferSource,
+): WebGLBuffer {
+  const positionBuffer = gl.createBuffer();
+  if (!positionBuffer) {
+    throw new Error('Cant create buffer');
+  }
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+
+  return positionBuffer;
 }
 
 function createTexture(
@@ -206,7 +226,7 @@ export function createVao(
     uv,
   }: {
     position: AttributesInfo;
-    uv: AttributesInfo;
+    uv?: AttributesInfo;
   },
 ): WebGLVertexArrayObject {
   const vao = gl.createVertexArray();
@@ -220,9 +240,11 @@ export function createVao(
   gl.enableVertexAttribArray(position.location);
   gl.vertexAttribPointer(position.location, 3, gl.FLOAT, false, 0, 0);
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, uv.buffer);
-  gl.enableVertexAttribArray(uv.location);
-  gl.vertexAttribPointer(uv.location, 2, gl.FLOAT, false, 0, 0);
+  if (uv) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, uv.buffer);
+    gl.enableVertexAttribArray(uv.location);
+    gl.vertexAttribPointer(uv.location, 2, gl.FLOAT, false, 0, 0);
+  }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
@@ -237,6 +259,12 @@ export function initialize(
     gl,
     matrixVertexShaderInfo,
     textureFragmentShaderInfo,
+  );
+
+  const lineShaderProgram = createShaderProgram(
+    gl,
+    matrixVertexShaderInfo,
+    simpleFragmentShaderInfo,
   );
 
   const objects: SceneObject[] = [];
@@ -262,19 +290,37 @@ export function initialize(
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bindTexture(gl.TEXTURE_2D, texture);
 
+  const lineBuffer = createLineBuffer(
+    gl,
+    new Float32Array([10, 0, 0, -10, 0, 0]),
+  );
+
+  const linesVao = createVao(gl, {
+    position: {
+      location: lineShaderProgram.locations.getAttribute('a_position'),
+      buffer: lineBuffer,
+    },
+  });
+
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clearColor(0, 0, 0, 1);
   // gl.clearDepth(0);
-
-  gl.useProgram(shaderProgram.program);
 
   gl.enable(gl.CULL_FACE);
   gl.cullFace(gl.FRONT);
   gl.enable(gl.DEPTH_TEST);
 
+  objects.push({
+    renderType: RenderType.DRAW_ARRAYS,
+    renderMode: gl.LINES,
+    elementsCount: 2,
+  });
+
   return {
     shaderProgram,
     vao,
+    lineShaderProgram,
+    linesVao,
     objects,
   };
 }
