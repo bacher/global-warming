@@ -1,0 +1,8 @@
+.fpsCounter {
+  position: fixed;
+  top: 0;
+  right: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
