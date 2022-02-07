@@ -39,8 +39,9 @@ export type SceneObject = DrawElementsObject | DrawArraysObject;
 
 export type Scene = {
   shaderProgram: ShaderProgram;
-  lineShaderProgram: ShaderProgram;
   vao: WebGLVertexArrayObject;
   linesVao: WebGLVertexArrayObject;
+  lineShaderProgram: ShaderProgram;
+  lineBuffer: WebGLBuffer;
   objects: SceneObject[];
 };

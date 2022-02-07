@@ -321,6 +321,7 @@ export function initialize(
     vao,
     lineShaderProgram,
     linesVao,
+    lineBuffer,
     objects,
   };
 }
