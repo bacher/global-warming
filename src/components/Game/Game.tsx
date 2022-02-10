@@ -4,15 +4,17 @@ import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
 import {useFpsCounter} from '../../hooks/useFpsCounter';
+import {useWindowEvent} from '../../hooks/useWindowEvent';
 
 import styles from './Game.module.css';
-import {useWindowEvent} from '../../hooks/useWindowEvent';
+import {debugFrame} from '../../utils/debug';
 
 const WIDTH = 800;
 const HEIGHT = 600;
 
 export function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const debugCanvasRef = useRef<HTMLCanvasElement>(null);
   const [assets, setAssets] = useState<Assets | undefined>();
   const timeRef = useRef(0);
   const {fpsCounterRef, tick} = useFpsCounter();
@@ -48,7 +50,21 @@ export function Game() {
         width: WIDTH,
         height: HEIGHT,
         time: Date.now() - timeRef.current,
+        // time: 0,
         pointer: mousePosRef.current,
+        debugOnFrame: ({matrix}) => {
+          const ctx = debugCanvasRef.current!.getContext('2d')!;
+          const modelData = assets!.modelData;
+
+          debugFrame({
+            ctx,
+            matrix,
+            modelData,
+            cursor: mousePosRef.current
+              ? [mousePosRef.current.x, mousePosRef.current.y, 0]
+              : undefined,
+          });
+        },
       });
       tick();
       requestAnimationFrame(doRender);
@@ -72,10 +88,16 @@ export function Game() {
   });
 
   return (
-    <div>
+    <div className={styles.root}>
       <canvas
         ref={canvasRef}
         className={styles.canvas}
+        width={WIDTH}
+        height={HEIGHT}
+      />
+      <canvas
+        ref={debugCanvasRef}
+        className={styles.debugCanvas}
         width={WIDTH}
         height={HEIGHT}
       />

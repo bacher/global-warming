@@ -9,6 +9,7 @@ type Options = {
   height: number;
   time: number;
   pointer: {x: number; y: number} | undefined;
+  debugOnFrame?: (params: {matrix: mat4}) => void;
 };
 
 function setUniformData(
@@ -112,5 +113,11 @@ export function draw(
         gl.enable(gl.DEPTH_TEST);
         break;
     }
+  }
+
+  if (options.debugOnFrame) {
+    options.debugOnFrame({
+      matrix,
+    });
   }
 }

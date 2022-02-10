@@ -7,14 +7,10 @@ export type ModelData = {
 };
 
 export function parseBinModel(buffer: ArrayBuffer): ModelData {
-  console.log('buffer', buffer);
-
   const headerSize = 8;
   const header = new Uint32Array(buffer.slice(0, headerSize));
   const verticesCount = header[0];
   const facesCount = header[1];
-
-  console.log('V', verticesCount, 'F', facesCount);
 
   const positionSize = verticesCount * 3 * 4;
   const normalSize = verticesCount * 3 * 4;

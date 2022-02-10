@@ -1,4 +1,11 @@
+.root {
+  display: flex;
+}
+
 .canvas {
+}
+
+.debugCanvas {
 }
 
 .fpsCounter {
