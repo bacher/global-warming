@@ -57,7 +57,7 @@ export function draw(
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   const matrix = mat4.create();
-  mat4.rotateY(matrix, cameraMatrix, options.time * 0.0005);
+  mat4.rotateY(matrix, cameraMatrix, options.time * 0.0001);
   mat4.mul(matrix, matrix, initialTransform);
 
   if (options.pointer) {

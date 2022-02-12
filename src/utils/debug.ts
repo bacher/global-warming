@@ -1,23 +1,13 @@
 import {vec3, mat4} from 'gl-matrix';
 
 import type {ModelData} from './binary';
+import {
+  applyInterpolation,
+  getInterpolationRatios,
+  isPointInTriangle,
+} from './math';
 
 const visionDir = vec3.fromValues(0, 0, 1);
-
-function sign(p1: vec3, p2: vec3, p3: vec3): number {
-  return (p1[0] - p3[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p3[1]);
-}
-
-function pointInTriangle(pt: vec3, v1: vec3, v2: vec3, v3: vec3): boolean {
-  const d1 = sign(pt, v1, v2);
-  const d2 = sign(pt, v2, v3);
-  const d3 = sign(pt, v3, v1);
-
-  const has_neg = d1 < 0 || d2 < 0 || d3 < 0;
-  const has_pos = d1 > 0 || d2 > 0 || d3 > 0;
-
-  return !(has_neg && has_pos);
-}
 
 type Params = {
   ctx: CanvasRenderingContext2D;
@@ -53,6 +43,10 @@ export function debugFrame({ctx, matrix, modelData, cursor}: Params) {
     const v2p = modelData.positionData.slice(v2 * 3, v2 * 3 + 3);
     const v3p = modelData.positionData.slice(v3 * 3, v3 * 3 + 3);
 
+    const v1uv = modelData.uvData.slice(v1 * 2, v1 * 2 + 2);
+    const v2uv = modelData.uvData.slice(v2 * 2, v2 * 2 + 2);
+    const v3uv = modelData.uvData.slice(v3 * 2, v3 * 2 + 2);
+
     const v1np = vec3.transformMat4(vec3.create(), v1p, matrix);
     const v2np = vec3.transformMat4(vec3.create(), v2p, matrix);
     const v3np = vec3.transformMat4(vec3.create(), v3p, matrix);
@@ -80,30 +74,44 @@ export function debugFrame({ctx, matrix, modelData, cursor}: Params) {
       ctx.stroke();
     }
 
-    if (cursor && pointInTriangle(cursor, v1np, v2np, v3np)) {
+    if (cursor && isPointInTriangle(cursor, v1np, v2np, v3np)) {
       cursorTriangles.push({
         v1np,
         v2np,
         v3np,
         sumZ: v1np[2] + v2np[2] + v3np[2],
+        v1uv,
+        v2uv,
+        v3uv,
       });
     }
   }
 
-  if (cursorTriangles.length) {
-    const {v1np, v2np, v3np} = cursorTriangles.sort(
+  if (cursor && cursorTriangles.length) {
+    const {v1np, v2np, v3np, v1uv, v2uv, v3uv} = cursorTriangles.sort(
       (a, b) => a.sumZ - b.sumZ,
     )[0];
+
+    const ratios = getInterpolationRatios([v1np, v2np, v3np], cursor);
+
+    const uv = applyInterpolation([v1uv, v2uv, v3uv], ratios);
+
+    let isCountry = false;
+
+    // @ts-ignore
+    if (window.lookupCountryByUv) {
+      // @ts-ignore
+      isCountry = window.lookupCountryByUv(uv);
+    }
 
     ctx.beginPath();
     ctx.moveTo(v1np[0], v1np[1]);
     ctx.lineTo(v2np[0], v2np[1]);
     ctx.lineTo(v3np[0], v3np[1]);
     ctx.closePath();
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = isCountry ? '#f00' : '#000';
     ctx.fill();
   }
 
   ctx.restore();
 }
-

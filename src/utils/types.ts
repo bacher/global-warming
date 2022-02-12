@@ -1,3 +1,9 @@
+import {vec2, vec3, vec4} from 'gl-matrix';
+
+export type Point2d = [number, number];
+
+export type AsPoint2d = Point2d | vec2 | vec3 | vec4;
+
 export type VertexShaderInfo = {
   source: string;
   uniforms: string[];

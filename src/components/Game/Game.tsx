@@ -3,11 +3,12 @@ import {useEffect, useRef, useState} from 'react';
 import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
+import {debugFrame} from '../../utils/debug';
 import {useFpsCounter} from '../../hooks/useFpsCounter';
 import {useWindowEvent} from '../../hooks/useWindowEvent';
 
+import {CountriesCanvas} from '../CountriesCanvas';
 import styles from './Game.module.css';
-import {debugFrame} from '../../utils/debug';
 
 const WIDTH = 800;
 const HEIGHT = 600;
@@ -74,8 +75,8 @@ export function Game() {
   }, [assets]);
 
   useWindowEvent<MouseEvent>('mousemove', (event) => {
-    const x = event.clientX;
-    const y = event.clientY;
+    const x = event.offsetX;
+    const y = event.offsetY;
 
     if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) {
       mousePosRef.current = undefined;
@@ -88,21 +89,24 @@ export function Game() {
   });
 
   return (
-    <div className={styles.root}>
-      <canvas
-        ref={canvasRef}
-        className={styles.canvas}
-        width={WIDTH}
-        height={HEIGHT}
-      />
-      <canvas
-        ref={debugCanvasRef}
-        className={styles.debugCanvas}
-        width={WIDTH}
-        height={HEIGHT}
-      />
-      <span ref={fpsCounterRef} className={styles.fpsCounter} />
-      <pre id="output" className={styles.output} />
-    </div>
+    <>
+      <div className={styles.root}>
+        <canvas
+          ref={canvasRef}
+          className={styles.canvas}
+          width={WIDTH}
+          height={HEIGHT}
+        />
+        <canvas
+          ref={debugCanvasRef}
+          className={styles.debugCanvas}
+          width={WIDTH}
+          height={HEIGHT}
+        />
+        <span ref={fpsCounterRef} className={styles.fpsCounter} />
+        <pre id="output" className={styles.output} />,
+      </div>
+      <CountriesCanvas />
+    </>
   );
 }
