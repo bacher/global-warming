@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/global-warming/static/css/main.e8e69c82.css",
+    "main.js": "/global-warming/static/js/main.57952204.js",
+    "index.html": "/global-warming/index.html",
+    "main.e8e69c82.css.map": "/global-warming/static/css/main.e8e69c82.css.map",
+    "main.57952204.js.map": "/global-warming/static/js/main.57952204.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e8e69c82.css",
+    "static/js/main.57952204.js"
+  ]
+}
