@@ -9,6 +9,7 @@ precision highp float;
 
 uniform sampler2D u_texture;
 uniform sampler2D u_texture2;
+uniform uint u_selected;
 in vec2 v_texcoord;
 out vec4 outColor;
 
@@ -16,15 +17,22 @@ void main() {
   vec4 solid = texture(u_texture, v_texcoord);
   vec4 country = texture(u_texture2, v_texcoord); 
   
-  outColor = vec4(
-    mix(
-      solid,
-      country,
-      country.a
-    ).xyz,
-    1
-  );
+  if (country.a > 0.0) {
+    if (u_selected == uint(country.r * 255.0 + 0.5)) {
+      outColor = vec4(
+        mix(
+          solid.rgb,
+          vec3(1.0, 0.0, 0.0),
+          country.a
+        ),
+        1
+      );
+      return;
+    }
+  }
+  
+  outColor = solid;
 }
 `,
-  uniforms: ['u_texture', 'u_texture2'],
+  uniforms: ['u_texture', 'u_texture2', 'u_selected'],
 };

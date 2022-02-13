@@ -1,6 +1,6 @@
 import {mat4, vec3} from 'gl-matrix';
 
-import type {Scene, ShaderProgram} from './types';
+import type {GameState, Scene, ShaderProgram} from './types';
 import {RenderType} from './types';
 import {formatVec3} from './format';
 
@@ -12,7 +12,7 @@ type Options = {
   debugOnFrame?: (params: {matrix: mat4}) => void;
 };
 
-function setUniformData(
+function setUniformMatrixData(
   gl: WebGL2RenderingContext,
   shaderProgram: ShaderProgram,
   uniformName: string,
@@ -52,6 +52,7 @@ const cameraMatrix = getCameraTransform({aspectRatio: 800 / 600});
 export function draw(
   gl: WebGL2RenderingContext,
   scene: Scene,
+  gameState: GameState,
   options: Options,
 ) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -95,7 +96,11 @@ export function draw(
       case RenderType.DRAW_ELEMENTS:
         gl.useProgram(scene.shaderProgram.program);
         gl.bindVertexArray(scene.vao);
-        setUniformData(gl, scene.shaderProgram, 'u_matrix', matrix);
+        setUniformMatrixData(gl, scene.shaderProgram, 'u_matrix', matrix);
+        gl.uniform1ui(
+          scene.shaderProgram.locations.getUniform('u_selected'),
+          gameState.selectedCountry ?? 0,
+        );
 
         gl.drawElements(obj.renderMode, obj.elementsCount, obj.indexType, 0);
         break;
@@ -106,7 +111,7 @@ export function draw(
 
         gl.useProgram(scene.lineShaderProgram.program);
         gl.bindVertexArray(scene.linesVao);
-        setUniformData(gl, scene.lineShaderProgram, 'u_matrix', matrix);
+        setUniformMatrixData(gl, scene.lineShaderProgram, 'u_matrix', matrix);
 
         gl.disable(gl.DEPTH_TEST);
         gl.drawArrays(obj.renderMode, 0, obj.elementsCount);

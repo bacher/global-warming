@@ -4,6 +4,7 @@ import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
 import {debugFrame} from '../../utils/debug';
+import {GameState} from '../../utils/types';
 import {useFpsCounter} from '../../hooks/useFpsCounter';
 import {useWindowEvent} from '../../hooks/useWindowEvent';
 
@@ -20,6 +21,8 @@ export function Game() {
   const timeRef = useRef(0);
   const {fpsCounterRef, tick} = useFpsCounter();
   const mousePosRef = useRef<{x: number; y: number} | undefined>();
+
+  const gameStateRef = useRef<GameState>({selectedCountry: undefined});
 
   useEffect(() => {
     loadAssets().then(setAssets);
@@ -44,10 +47,10 @@ export function Game() {
 
     const scene = initialize(gl, assets);
 
-    timeRef.current = Date.now();
+    timeRef.current = Date.now() - 20000;
 
     function doRender() {
-      draw(gl!, scene, {
+      draw(gl!, scene, gameStateRef.current, {
         width: WIDTH,
         height: HEIGHT,
         time: Date.now() - timeRef.current,
@@ -64,6 +67,7 @@ export function Game() {
             cursor: mousePosRef.current
               ? [mousePosRef.current.x, mousePosRef.current.y, 0]
               : undefined,
+            gameState: gameStateRef.current,
           });
         },
       });
@@ -106,7 +110,7 @@ export function Game() {
         <span ref={fpsCounterRef} className={styles.fpsCounter} />
         <pre id="output" className={styles.output} />
       </div>
-      <CountriesCanvas />
+      {assets && <CountriesCanvas image={assets.textures.countries} />}
     </>
   );
 }

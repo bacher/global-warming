@@ -51,3 +51,7 @@ export type Scene = {
   lineBuffer: WebGLBuffer;
   objects: SceneObject[];
 };
+
+export type GameState = {
+  selectedCountry: number | undefined;
+};

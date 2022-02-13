@@ -6,6 +6,7 @@ import {
   getInterpolationRatios,
   isPointInTriangle,
 } from './math';
+import type {GameState} from './types';
 
 const visionDir = vec3.fromValues(0, 0, 1);
 
@@ -14,9 +15,16 @@ type Params = {
   matrix: mat4;
   modelData: ModelData;
   cursor?: vec3;
+  gameState: GameState;
 };
 
-export function debugFrame({ctx, matrix, modelData, cursor}: Params) {
+export function debugFrame({
+  ctx,
+  matrix,
+  modelData,
+  cursor,
+  gameState,
+}: Params) {
   ctx.save();
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, 800, 600);
@@ -96,21 +104,20 @@ export function debugFrame({ctx, matrix, modelData, cursor}: Params) {
 
     const uv = applyInterpolation([v1uv, v2uv, v3uv], ratios);
 
-    let isCountry = false;
-
     // @ts-ignore
-    if (window.lookupCountryByUv) {
-      // @ts-ignore
-      isCountry = window.lookupCountryByUv(uv);
-    }
+    const countryIndex = window.lookupCountryByUv?.(uv);
+
+    gameState.selectedCountry = countryIndex;
 
     ctx.beginPath();
     ctx.moveTo(v1np[0], v1np[1]);
     ctx.lineTo(v2np[0], v2np[1]);
     ctx.lineTo(v3np[0], v3np[1]);
     ctx.closePath();
-    ctx.fillStyle = isCountry ? '#f00' : '#000';
+    ctx.fillStyle = countryIndex ? '#f00' : '#000';
     ctx.fill();
+  } else {
+    gameState.selectedCountry = undefined;
   }
 
   ctx.restore();

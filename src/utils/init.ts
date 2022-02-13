@@ -195,6 +195,7 @@ function createTexture(
   gl: WebGL2RenderingContext,
   textureImage: HTMLImageElement,
   textureUnitIndex = 0,
+  smooth = false,
 ): WebGLTexture {
   gl.activeTexture(gl.TEXTURE0 + textureUnitIndex);
 
@@ -206,12 +207,19 @@ function createTexture(
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(
-    gl.TEXTURE_2D,
-    gl.TEXTURE_MIN_FILTER,
-    gl.LINEAR_MIPMAP_LINEAR,
-  );
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+  if (smooth) {
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_MIN_FILTER,
+      gl.LINEAR_MIPMAP_LINEAR,
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  } else {
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  }
+
   gl.texImage2D(
     gl.TEXTURE_2D,
     0,
@@ -220,7 +228,10 @@ function createTexture(
     gl.UNSIGNED_BYTE,
     textureImage,
   );
-  gl.generateMipmap(gl.TEXTURE_2D);
+
+  if (smooth) {
+    gl.generateMipmap(gl.TEXTURE_2D);
+  }
 
   return texture;
 }
@@ -286,7 +297,7 @@ export function initialize(
     objects,
   );
 
-  const earthTexture = createTexture(gl, textures.earth);
+  const earthTexture = createTexture(gl, textures.earth, 0, true);
   const countriesTexture = createTexture(gl, textures.countries, 1);
 
   gl.useProgram(shaderProgram.program);
