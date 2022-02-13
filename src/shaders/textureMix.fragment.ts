@@ -1,0 +1,30 @@
+import type {FragmentShaderInfo} from '../utils/types';
+
+export const textureMixFragmentShaderInfo: FragmentShaderInfo = {
+  source: `#version 300 es
+
+// fragment shaders don't have a default precision so we need
+// to pick one. highp is a good default. It means "high precision"
+precision highp float;
+
+uniform sampler2D u_texture;
+uniform sampler2D u_texture2;
+in vec2 v_texcoord;
+out vec4 outColor;
+
+void main() {
+  vec4 solid = texture(u_texture, v_texcoord);
+  vec4 country = texture(u_texture2, v_texcoord); 
+  
+  outColor = vec4(
+    mix(
+      solid,
+      country,
+      country.a
+    ).xyz,
+    1
+  );
+}
+`,
+  uniforms: ['u_texture', 'u_texture2'],
+};

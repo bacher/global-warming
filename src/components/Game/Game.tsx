@@ -104,7 +104,7 @@ export function Game() {
           height={HEIGHT}
         />
         <span ref={fpsCounterRef} className={styles.fpsCounter} />
-        <pre id="output" className={styles.output} />,
+        <pre id="output" className={styles.output} />
       </div>
       <CountriesCanvas />
     </>

@@ -10,9 +10,9 @@ import type {
 import {RenderType} from './types';
 import type {ModelData} from './binary';
 import {matrixVertexShaderInfo} from '../shaders/matrix.vertex';
-import {textureFragmentShaderInfo} from '../shaders/texture.fragment';
-import type {Assets} from './loader';
+import {textureMixFragmentShaderInfo} from '../shaders/textureMix.fragment';
 import {simpleFragmentShaderInfo} from '../shaders/simple.fragment';
+import type {Assets} from './loader';
 
 function createShader(
   gl: WebGL2RenderingContext,
@@ -194,13 +194,24 @@ function createLineBuffer(
 function createTexture(
   gl: WebGL2RenderingContext,
   textureImage: HTMLImageElement,
+  textureUnitIndex = 0,
 ): WebGLTexture {
+  gl.activeTexture(gl.TEXTURE0 + textureUnitIndex);
+
   const texture = gl.createTexture();
   if (!texture) {
     throw new Error('Cant create texture');
   }
 
   gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(
+    gl.TEXTURE_2D,
+    gl.TEXTURE_MIN_FILTER,
+    gl.LINEAR_MIPMAP_LINEAR,
+  );
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texImage2D(
     gl.TEXTURE_2D,
     0,
@@ -243,7 +254,7 @@ export function createVao(
   if (uv) {
     gl.bindBuffer(gl.ARRAY_BUFFER, uv.buffer);
     gl.enableVertexAttribArray(uv.location);
-    gl.vertexAttribPointer(uv.location, 2, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(uv.location, 2, gl.FLOAT, true, 0, 0);
   }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -253,12 +264,12 @@ export function createVao(
 
 export function initialize(
   gl: WebGL2RenderingContext,
-  {modelData, textureImage}: Assets,
+  {modelData, textures}: Assets,
 ): Scene {
   const shaderProgram = createShaderProgram(
     gl,
     matrixVertexShaderInfo,
-    textureFragmentShaderInfo,
+    textureMixFragmentShaderInfo,
   );
 
   const lineShaderProgram = createShaderProgram(
@@ -275,7 +286,10 @@ export function initialize(
     objects,
   );
 
-  const texture = createTexture(gl, textureImage);
+  const earthTexture = createTexture(gl, textures.earth);
+  const countriesTexture = createTexture(gl, textures.countries, 1);
+
+  gl.useProgram(shaderProgram.program);
 
   const vao = createVao(gl, {
     position: {
@@ -288,7 +302,8 @@ export function initialize(
     },
   });
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.uniform1i(shaderProgram.locations.getUniform('u_texture'), 0);
+  gl.uniform1i(shaderProgram.locations.getUniform('u_texture2'), 1);
 
   const lineBuffer = createLineBuffer(
     gl,

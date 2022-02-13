@@ -27,17 +27,21 @@ async function loadModel(modelName: string): Promise<ModelData> {
 
 export type Assets = {
   modelData: ModelData;
-  textureImage: HTMLImageElement;
+  textures: Record<string, HTMLImageElement>;
 };
 
 export async function loadAssets(): Promise<Assets> {
-  const [modelData, texture] = await Promise.all([
+  const [modelData, earth, countries] = await Promise.all([
     loadModel(`${process.env.PUBLIC_URL}/earth.bin`),
     loadTexture(`${process.env.PUBLIC_URL}/textures/earth_compress.png`),
+    loadTexture(`${process.env.PUBLIC_URL}/textures/earth_countries.png`),
   ]);
 
   return {
     modelData,
-    textureImage: texture,
+    textures: {
+      earth,
+      countries,
+    },
   };
 }
