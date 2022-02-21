@@ -24,11 +24,11 @@ export function CountriesCanvas({image}: Props) {
         1,
       );
 
-      if (q.data[3] > 0) {
-        return q.data[0];
+      if (q.data[0] === 0) {
+        return undefined;
       }
 
-      return undefined;
+      return q.data[0];
     };
   }, []);
 

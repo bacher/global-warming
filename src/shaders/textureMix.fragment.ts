@@ -17,7 +17,7 @@ void main() {
   vec4 solid = texture(u_texture, v_texcoord);
   vec4 country = texture(u_texture2, v_texcoord); 
   
-  if (country.a > 0.0) {
+  if (country.r > 0.0) {
     if (u_selected == uint(country.r * 255.0 + 0.5)) {
       outColor = vec4(
         mix(
