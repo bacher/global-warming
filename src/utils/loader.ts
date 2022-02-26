@@ -31,10 +31,11 @@ export type Assets = {
 };
 
 export async function loadAssets(): Promise<Assets> {
-  const [modelData, earth, countries] = await Promise.all([
+  const [modelData, earth, countries, area] = await Promise.all([
     loadModel(`${process.env.PUBLIC_URL}/earth.bin`),
     loadTexture(`${process.env.PUBLIC_URL}/textures/earth_compress.png`),
     loadTexture(`${process.env.PUBLIC_URL}/textures/earth_countries.png`),
+    loadTexture(`${process.env.PUBLIC_URL}/textures/earth_area.png`),
   ]);
 
   return {
@@ -42,6 +43,7 @@ export async function loadAssets(): Promise<Assets> {
     textures: {
       earth,
       countries,
+      area,
     },
   };
 }

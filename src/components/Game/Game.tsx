@@ -237,7 +237,7 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
           <pre id="output" />
         </div>
       </div>
-      {assets && <CountriesCanvas image={assets.textures.countries} />}
+      {assets && <CountriesCanvas image={assets.textures.area} />}
     </>
   );
 }
