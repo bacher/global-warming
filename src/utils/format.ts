@@ -16,3 +16,7 @@ ${(point[0] * 100).toFixed(0).padStart(6)}, \
 ${(point[1] * 100).toFixed(0).padStart(6)}, \
 ${(100 * point[2]).toFixed(0).padStart(6)})`;
 }
+
+export function formatNumber(value: number, precision = 2): string {
+  return value.toFixed(precision).padStart(8);
+}

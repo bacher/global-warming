@@ -88,3 +88,15 @@ console.log('Ratios:', ratios);
 
 console.log('Applied:', applyInterpolation(points as any, ratios));
 */
+
+export function bound(value: number, min: number, max: number): number {
+  if (value < min) {
+    return min;
+  }
+
+  if (value > max) {
+    return max;
+  }
+
+  return value;
+}

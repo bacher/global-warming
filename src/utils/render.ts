@@ -9,6 +9,7 @@ type Options = {
   height: number;
   time: number;
   pointer: {x: number; y: number} | undefined;
+  direction: {spin: number; roll: number};
   debugOnFrame?: (params: {matrix: mat4}) => void;
 };
 
@@ -57,8 +58,9 @@ export function draw(
 ) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  const matrix = mat4.create();
-  mat4.rotateY(matrix, cameraMatrix, options.time * 0.0001);
+  const matrix = mat4.clone(cameraMatrix);
+  mat4.rotateX(matrix, matrix, -options.direction.roll);
+  mat4.rotateY(matrix, matrix, -options.direction.spin);
   mat4.mul(matrix, matrix, initialTransform);
 
   if (options.pointer) {
@@ -76,11 +78,13 @@ export function draw(
     vec3.add(end, start, dir);
     vec3.sub(start, start, dir);
 
+    /*
     const outputElement = document.getElementById('output');
 
     if (outputElement) {
       outputElement.innerText = `${formatVec3(start)}\n${formatVec3(end)}`;
     }
+     */
 
     gl.bindBuffer(gl.ARRAY_BUFFER, scene.lineBuffer);
     gl.bufferData(

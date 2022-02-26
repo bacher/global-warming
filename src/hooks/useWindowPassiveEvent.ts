@@ -2,7 +2,7 @@ import {useEffect} from 'react';
 
 import {useHandler} from './useHandler';
 
-export function useWindowEvent<EventType extends Event = Event>(
+export function useWindowPassiveEvent<EventType extends Event = Event>(
   eventName: string,
   callback: (event: EventType) => void,
 ) {
