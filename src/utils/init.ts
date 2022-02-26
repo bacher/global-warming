@@ -329,7 +329,7 @@ export function initialize(
   });
 
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-  gl.clearColor(0, 0, 0, 1);
+  gl.clearColor(0, 0, 0, 0);
   // gl.clearDepth(0);
 
   gl.enable(gl.CULL_FACE);
