@@ -10,6 +10,7 @@ type Options = {
   time: number;
   pointer: {x: number; y: number} | undefined;
   direction: {spin: number; roll: number};
+  distance: number;
   debugOnFrame?: (params: {matrix: mat4}) => void;
 };
 
@@ -42,10 +43,7 @@ function getInitialTransformation(): mat4 {
 const initialTransform = getInitialTransformation();
 
 function getCameraTransform({aspectRatio}: {aspectRatio: number}): mat4 {
-  const matrix = mat4.create();
-  mat4.perspective(matrix, Math.PI / 8, aspectRatio, 0.001, 2000);
-  mat4.translate(matrix, matrix, [0, 0, -20]);
-  return matrix;
+  return mat4.perspective(mat4.create(), Math.PI / 8, aspectRatio, 0.001, 2000);
 }
 
 const cameraMatrix = getCameraTransform({aspectRatio: 800 / 600});
@@ -59,6 +57,7 @@ export function draw(
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   const matrix = mat4.clone(cameraMatrix);
+  mat4.translate(matrix, matrix, [0, 0, -options.distance]);
   mat4.rotateX(matrix, matrix, -options.direction.roll);
   mat4.rotateY(matrix, matrix, -options.direction.spin);
   mat4.mul(matrix, matrix, initialTransform);

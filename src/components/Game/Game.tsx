@@ -6,18 +6,22 @@ import {Assets, loadAssets} from '../../utils/loader';
 import {debugFrame} from '../../utils/debug';
 import {GameState} from '../../utils/types';
 import {bound} from '../../utils/math';
+import {formatNumber} from '../../utils/format';
 import {useFpsCounter} from '../../hooks/useFpsCounter';
 import {useWindowPassiveEvent} from '../../hooks/useWindowPassiveEvent';
 
 import {CountriesCanvas} from '../CountriesCanvas';
-import styles from './Game.module.css';
-import {formatNumber} from '../../utils/format';
+import styles from './Game.module.scss';
 
 const WIDTH = 800;
 const HEIGHT = 600;
 
 const SPIN_SPEED = 0.16;
 const ROLL_SPEED = 0.14;
+const ZOOM_SPEED = 12;
+
+const MINIMAL_DISTANCE = 9;
+const MAXIMUM_DISTANCE = 40;
 
 type Direction = {
   spin: number;
@@ -26,6 +30,7 @@ type Direction = {
 
 type DirectionState = {
   direction: Direction;
+  distance: number;
   lastApplyTs: number | undefined;
 };
 
@@ -39,7 +44,8 @@ export function Game() {
   const pressedMap = useMemo<Set<string>>(() => new Set(), []);
   const directionState = useMemo<DirectionState>(
     () => ({
-      direction: {spin: -2.5, roll: -0.5},
+      direction: {spin: -2.63, roll: -0.75},
+      distance: 12,
       lastApplyTs: undefined,
     }),
     [],
@@ -51,7 +57,7 @@ export function Game() {
     loadAssets().then(setAssets);
   }, []);
 
-  function applyInputDirection(): void {
+  function applyInput(): void {
     const now = Date.now();
 
     if (directionState.lastApplyTs) {
@@ -59,6 +65,7 @@ export function Game() {
 
       let x = 0;
       let y = 0;
+      let distance = 0;
 
       if (pressedMap.has('KeyA')) {
         x -= 1;
@@ -76,6 +83,14 @@ export function Game() {
         y += 1;
       }
 
+      if (pressedMap.has('KeyE')) {
+        distance -= 1;
+      }
+
+      if (pressedMap.has('KeyQ')) {
+        distance += 1;
+      }
+
       if (x !== 0 && y !== 0) {
         x *= 0.71;
         y *= 0.71;
@@ -90,12 +105,21 @@ export function Game() {
         Math.PI * 0.45,
       );
 
+      directionState.distance += distance * passed * ZOOM_SPEED;
+
+      directionState.distance = bound(
+        directionState.distance,
+        MINIMAL_DISTANCE,
+        MAXIMUM_DISTANCE,
+      );
+
       const outputElement = document.getElementById('output');
       if (outputElement) {
         outputElement.innerText = `Roll: ${formatNumber(
           directionState.direction.roll,
         )}rad
-Spin: ${formatNumber(directionState.direction.spin)}rad`;
+Spin: ${formatNumber(directionState.direction.spin)}rad
+Distance: ${formatNumber(directionState.distance, 0)}`;
       }
     }
 
@@ -124,7 +148,7 @@ Spin: ${formatNumber(directionState.direction.spin)}rad`;
     timeRef.current = Date.now() - 20000;
 
     function doRender() {
-      applyInputDirection();
+      applyInput();
 
       draw(gl!, scene, gameStateRef.current, {
         width: WIDTH,
@@ -133,6 +157,7 @@ Spin: ${formatNumber(directionState.direction.spin)}rad`;
         // time: 0,
         pointer: mousePosRef.current,
         direction: directionState.direction,
+        distance: directionState.distance,
         debugOnFrame: ({matrix}) => {
           const ctx = debugCanvasRef.current!.getContext('2d')!;
           const modelData = assets!.modelData;
@@ -201,7 +226,16 @@ Spin: ${formatNumber(directionState.direction.spin)}rad`;
           height={HEIGHT}
         />
         <span ref={fpsCounterRef} className={styles.fpsCounter} />
-        <pre id="output" className={styles.output} />
+        <div className={styles.output}>
+          <pre>
+            Controls:
+            <br />
+            Rotate globe by &lt;WSAD&gt;
+            <br />
+            Zoom in/out by by &lt;Q&gt; and &lt;E&gt;
+          </pre>
+          <pre id="output" />
+        </div>
       </div>
       {assets && <CountriesCanvas image={assets.textures.countries} />}
     </>

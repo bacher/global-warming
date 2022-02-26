@@ -19,7 +19,17 @@
 
 .output {
   position: fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: end;
   top: 20px;
   right: 0;
   margin: 0;
+  user-select: none;
+  pointer-events: none;
+
+  & > * {
+    padding: 4px 6px;
+    background: rgba(200, 200, 200, 0.5);
+  }
 }
