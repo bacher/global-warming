@@ -15,6 +15,8 @@ export enum Country {
   SWEDEN,
   NORWAY,
   DENMARK,
+  PORTUGAL,
+  SPAIN,
 }
 
 type CountryDetails = {
@@ -139,6 +141,20 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0x5f,
       title: 'Denmark',
+    },
+  ],
+  [
+    Country.SPAIN,
+    {
+      color: 0x76,
+      title: 'Spain',
+    },
+  ],
+  [
+    Country.PORTUGAL,
+    {
+      color: 0x8a,
+      title: 'Portugal',
     },
   ],
 ]);
