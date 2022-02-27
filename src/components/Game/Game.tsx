@@ -1,5 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 
+import {CountryInfo, getRandomCountry} from '../../data/countries';
 import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
@@ -9,6 +10,7 @@ import {bound} from '../../utils/math';
 import {formatNumber} from '../../utils/format';
 import {useFpsCounter} from '../../hooks/useFpsCounter';
 import {useWindowPassiveEvent} from '../../hooks/useWindowPassiveEvent';
+import {useHandler} from '../../hooks/useHandler';
 
 import {CountriesCanvas} from '../CountriesCanvas';
 import styles from './Game.module.scss';
@@ -50,6 +52,7 @@ export function Game() {
     }),
     [],
   );
+  const [guessCity, setGuessCity] = useState<CountryInfo | undefined>();
 
   const gameStateRef = useRef<GameState>({selectedCountry: undefined});
 
@@ -210,15 +213,37 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
     toggleKey(event.code, false);
   });
 
+  const startGame = useHandler((event) => {
+    event.preventDefault();
+
+    const country = getRandomCountry();
+    setGuessCity(country);
+  });
+
   return (
     <>
       <div className={styles.root}>
-        <canvas
-          ref={canvasRef}
-          className={styles.canvas}
-          width={WIDTH}
-          height={HEIGHT}
-        />
+        <div className={styles.viewport}>
+          <canvas
+            ref={canvasRef}
+            className={styles.canvas}
+            width={WIDTH}
+            height={HEIGHT}
+          />
+          <div className={styles.ui}>
+            {guessCity ? (
+              <p className={styles.gameText}>Guess the "{guessCity.title}"</p>
+            ) : (
+              <button
+                type="button"
+                className={styles.startButton}
+                onClick={startGame}
+              >
+                Start the Game
+              </button>
+            )}
+          </div>
+        </div>
         <canvas
           ref={debugCanvasRef}
           className={styles.debugCanvas}
