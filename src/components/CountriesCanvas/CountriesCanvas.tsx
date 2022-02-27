@@ -1,5 +1,6 @@
 import {useEffect, useRef} from 'react';
 
+import {Country, getCountryByColor} from '../../data/countries';
 import type {Point2d} from '../../utils/types';
 
 import styles from './CountriesCanvas.module.css';
@@ -16,7 +17,7 @@ export function CountriesCanvas({image}: Props) {
     ctx.drawImage(image, 0, 0);
 
     // @ts-ignore
-    window.lookupCountryByUv = ([u, v]: Point2d) => {
+    window.lookupCountryByUv = ([u, v]: Point2d): Country | undefined => {
       const q = ctx.getImageData(
         Math.floor(u * 2098),
         Math.floor(v * 1574),
@@ -24,11 +25,7 @@ export function CountriesCanvas({image}: Props) {
         1,
       );
 
-      if (q.data[0] === 0) {
-        return undefined;
-      }
-
-      return q.data[0];
+      return getCountryByColor(q.data[0]);
     };
   }, []);
 

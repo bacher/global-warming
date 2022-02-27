@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 
-import {CountryInfo, getRandomCountry} from '../../data/countries';
+import {CountryInfo, getRandomCountryExcept} from '../../data/countries';
 import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
@@ -52,7 +52,7 @@ export function Game() {
     }),
     [],
   );
-  const [guessCity, setGuessCity] = useState<CountryInfo | undefined>();
+  const [guessCity, setGuessCountry] = useState<CountryInfo | undefined>();
 
   const gameStateRef = useRef<GameState>({selectedCountry: undefined});
 
@@ -213,11 +213,27 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
     toggleKey(event.code, false);
   });
 
-  const startGame = useHandler((event) => {
+  const startGame = useHandler(() => {
+    const country = getRandomCountryExcept(guessCity?.id);
+    setGuessCountry(country);
+  });
+
+  const onStartGameClick = useHandler((event) => {
+    event.preventDefault();
+    startGame();
+  });
+
+  const handleCanvasClick = useHandler((event) => {
     event.preventDefault();
 
-    const country = getRandomCountry();
-    setGuessCity(country);
+    if (guessCity) {
+      if (guessCity.id === gameStateRef.current.selectedCountry) {
+        window.alert('You are right!');
+        startGame();
+      } else {
+        window.alert('You missed, try again!');
+      }
+    }
   });
 
   return (
@@ -229,6 +245,7 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
             className={styles.canvas}
             width={WIDTH}
             height={HEIGHT}
+            onClick={handleCanvasClick}
           />
           <div className={styles.ui}>
             {guessCity ? (
@@ -237,7 +254,7 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
               <button
                 type="button"
                 className={styles.startButton}
-                onClick={startGame}
+                onClick={onStartGameClick}
               >
                 Start the Game
               </button>

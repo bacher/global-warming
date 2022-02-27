@@ -3,6 +3,7 @@ import {mat4, vec3} from 'gl-matrix';
 import type {GameState, Scene, ShaderProgram} from './types';
 import {RenderType} from './types';
 import {formatVec3} from './format';
+import {countries} from '../data/countries';
 
 type Options = {
   width: number;
@@ -102,7 +103,9 @@ export function draw(
         setUniformMatrixData(gl, scene.shaderProgram, 'u_matrix', matrix);
         gl.uniform1ui(
           scene.shaderProgram.locations.getUniform('u_selected'),
-          gameState.selectedCountry ?? 0,
+          (gameState.selectedCountry &&
+            countries.get(gameState.selectedCountry)?.color) ??
+            0,
         );
 
         gl.drawElements(obj.renderMode, obj.elementsCount, obj.indexType, 0);

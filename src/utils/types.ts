@@ -1,5 +1,7 @@
 import {vec2, vec3, vec4} from 'gl-matrix';
 
+import type {Country} from '../data/countries';
+
 export type Point2d = [number, number];
 
 export type AsPoint2d = Point2d | vec2 | vec3 | vec4;
@@ -53,5 +55,5 @@ export type Scene = {
 };
 
 export type GameState = {
-  selectedCountry: number | undefined;
+  selectedCountry: Country | undefined;
 };
