@@ -129,7 +129,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
   [
     Country.NORWAY,
     {
-      color: 0x45,
+      color: 0x47, // actual 0x46
       title: 'Norway',
     },
   ],

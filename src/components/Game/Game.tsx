@@ -219,6 +219,12 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
   });
 
   const startGame = useHandler(() => {
+    alreadyGuessedCountriesRef.current = [];
+    const country = getRandomCountryExcept(alreadyGuessedCountriesRef.current);
+    setGuessCountry(country);
+  });
+
+  const nextCountry = useHandler(() => {
     if (guessCountry) {
       alreadyGuessedCountriesRef.current.push(guessCountry.id);
     }
@@ -227,6 +233,8 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
 
     if (!country) {
       window.alert('You guessed all countries!');
+      setGuessCountry(undefined);
+      return;
     }
 
     setGuessCountry(country);
@@ -240,10 +248,12 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
   const handleCanvasClick = useHandler((event) => {
     event.preventDefault();
 
-    if (guessCountry) {
-      if (guessCountry.id === gameStateRef.current.selectedCountry) {
+    const {selectedCountry} = gameStateRef.current;
+
+    if (guessCountry && selectedCountry) {
+      if (guessCountry.id === selectedCountry) {
         window.alert('You are right!');
-        startGame();
+        nextCountry();
       } else {
         window.alert('You missed, try again!');
       }
