@@ -3866,6 +3866,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"classnames@npm:^2.3.1":
+  version: 2.3.1
+  resolution: "classnames@npm:2.3.1"
+  checksum: 14db8889d56c267a591f08b0834989fe542d47fac659af5a539e110cc4266694e8de86e4e3bbd271157dbd831361310a8293e0167141e80b0f03a0f175c80960
+  languageName: node
+  linkType: hard
+
 "clean-css@npm:^5.2.2":
   version: 5.2.4
   resolution: "clean-css@npm:5.2.4"
@@ -5994,6 +6001,7 @@ __metadata:
     "@types/node": ^16.11.22
     "@types/react": ^17.0.39
     "@types/react-dom": ^17.0.11
+    classnames: ^2.3.1
     gl-matrix: ^3.4.3
     lodash-es: ^4.17.21
     prettier: ^2.5.1

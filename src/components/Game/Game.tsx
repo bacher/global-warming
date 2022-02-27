@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
+import cn from 'classnames';
 
 import {
   Country,
@@ -15,6 +16,7 @@ import {formatNumber} from '../../utils/format';
 import {useFpsCounter} from '../../hooks/useFpsCounter';
 import {useWindowPassiveEvent} from '../../hooks/useWindowPassiveEvent';
 import {useHandler} from '../../hooks/useHandler';
+import {SplashType, useSplash} from '../../hooks/useSplash';
 
 import {CountriesCanvas} from '../CountriesCanvas';
 import styles from './Game.module.scss';
@@ -60,6 +62,8 @@ export function Game() {
   const alreadyGuessedCountriesRef = useRef<Country[]>([]);
 
   const gameStateRef = useRef<GameState>({selectedCountry: undefined});
+
+  const {splashText, showSplashText} = useSplash();
 
   useEffect(() => {
     loadAssets().then(setAssets);
@@ -232,7 +236,7 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
     const country = getRandomCountryExcept(alreadyGuessedCountriesRef.current);
 
     if (!country) {
-      window.alert('You guessed all countries!');
+      showSplashText('You guessed all countries!');
       setGuessCountry(undefined);
       return;
     }
@@ -252,10 +256,13 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
 
     if (guessCountry && selectedCountry) {
       if (guessCountry.id === selectedCountry) {
-        window.alert('You are right!');
+        showSplashText('You are right!');
         nextCountry();
       } else {
-        window.alert('You missed, try again!');
+        showSplashText('You missed, try again!', {
+          type: SplashType.BAD,
+          timeout: 3000,
+        });
       }
     }
   });
@@ -273,17 +280,35 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
           />
           <div className={styles.ui}>
             {guessCountry ? (
-              <p className={styles.gameText}>
-                Guess the "{guessCountry.title}"
-              </p>
+              <>
+                <div className={styles.column}>
+                  <p className={styles.gameText}>
+                    Guess the "{guessCountry.title}"
+                  </p>
+                </div>
+                {splashText && (
+                  <div className={styles.upper}>
+                    <p
+                      className={cn(styles.splashText, {
+                        [styles.splashTextBad]:
+                          splashText.type === SplashType.BAD,
+                      })}
+                    >
+                      {splashText.text}
+                    </p>
+                  </div>
+                )}
+              </>
             ) : (
-              <button
-                type="button"
-                className={styles.startButton}
-                onClick={onStartGameClick}
-              >
-                Start the Game
-              </button>
+              <div className={styles.centered}>
+                <button
+                  type="button"
+                  className={styles.startButton}
+                  onClick={onStartGameClick}
+                >
+                  Start the Game
+                </button>
+              </div>
             )}
           </div>
         </div>
