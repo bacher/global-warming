@@ -25,7 +25,16 @@ export function CountriesCanvas({image}: Props) {
         1,
       );
 
-      return getCountryByColor(q.data[0]);
+      const country = getCountryByColor(q.data[0]);
+
+      const output = document.getElementById('debugOutput');
+      if (output) {
+        output.innerText = `Hover color: ${q.data[0]} (0x${q.data[0].toString(
+          16,
+        )})\nCountry: ${country ?? '-'}`;
+      }
+
+      return country;
     };
   }, []);
 

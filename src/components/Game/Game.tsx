@@ -1,6 +1,10 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 
-import {CountryInfo, getRandomCountryExcept} from '../../data/countries';
+import {
+  Country,
+  CountryInfo,
+  getRandomCountryExcept,
+} from '../../data/countries';
 import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
@@ -52,7 +56,8 @@ export function Game() {
     }),
     [],
   );
-  const [guessCity, setGuessCountry] = useState<CountryInfo | undefined>();
+  const [guessCountry, setGuessCountry] = useState<CountryInfo | undefined>();
+  const alreadyGuessedCountriesRef = useRef<Country[]>([]);
 
   const gameStateRef = useRef<GameState>({selectedCountry: undefined});
 
@@ -214,7 +219,16 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
   });
 
   const startGame = useHandler(() => {
-    const country = getRandomCountryExcept(guessCity?.id);
+    if (guessCountry) {
+      alreadyGuessedCountriesRef.current.push(guessCountry.id);
+    }
+
+    const country = getRandomCountryExcept(alreadyGuessedCountriesRef.current);
+
+    if (!country) {
+      window.alert('You guessed all countries!');
+    }
+
     setGuessCountry(country);
   });
 
@@ -226,8 +240,8 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
   const handleCanvasClick = useHandler((event) => {
     event.preventDefault();
 
-    if (guessCity) {
-      if (guessCity.id === gameStateRef.current.selectedCountry) {
+    if (guessCountry) {
+      if (guessCountry.id === gameStateRef.current.selectedCountry) {
         window.alert('You are right!');
         startGame();
       } else {
@@ -248,8 +262,10 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
             onClick={handleCanvasClick}
           />
           <div className={styles.ui}>
-            {guessCity ? (
-              <p className={styles.gameText}>Guess the "{guessCity.title}"</p>
+            {guessCountry ? (
+              <p className={styles.gameText}>
+                Guess the "{guessCountry.title}"
+              </p>
             ) : (
               <button
                 type="button"
@@ -277,6 +293,7 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
             Zoom in/out by by &lt;Q&gt; and &lt;E&gt;
           </pre>
           <pre id="output" />
+          <pre id="debugOutput" />
         </div>
       </div>
       {assets && <CountriesCanvas image={assets.textures.area} />}

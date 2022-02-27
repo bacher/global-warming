@@ -101,7 +101,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
   [
     Country.SLOVENIA,
     {
-      color: 0x6a,
+      color: 0xb9,
       title: 'Slovenia',
     },
   ],
@@ -156,13 +156,15 @@ export const countriesByColor: Map<number, Country> = new Map(
 );
 
 export function getRandomCountryExcept(
-  countryId: Country | undefined,
-): CountryInfo {
+  ignoreCountries: Country[],
+): CountryInfo | undefined {
   // @ts-ignore
   let list = [...countries.values()];
 
-  if (countryId) {
-    list = list.filter((country) => country.id !== countryId);
+  list = list.filter((country) => !ignoreCountries.includes(country.id));
+
+  if (list.length === 0) {
+    return undefined;
   }
 
   return list[Math.floor(Math.random() * list.length)];
