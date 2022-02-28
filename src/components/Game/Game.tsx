@@ -17,6 +17,7 @@ import {useFpsCounter} from '../../hooks/useFpsCounter';
 import {useWindowPassiveEvent} from '../../hooks/useWindowPassiveEvent';
 import {useHandler} from '../../hooks/useHandler';
 import {SplashType, useSplash} from '../../hooks/useSplash';
+import {useWindowEvent} from '../../hooks/useWindowEvent';
 
 import {CountriesCanvas} from '../CountriesCanvas';
 import styles from './Game.module.scss';
@@ -52,7 +53,7 @@ export function Game() {
   const {fpsCounterRef, tick} = useFpsCounter();
   const mousePosRef = useRef<{x: number; y: number} | undefined>();
   const pressedMap = useMemo<Set<string>>(() => new Set(), []);
-  const mouseDragRef = useRef({x: 0, y: 0});
+  const mouseDragRef = useRef({x: 0, y: 0, isRealDragging: false});
   const directionState = useMemo<DirectionState>(
     () => ({
       direction: {spin: -2.63, roll: -0.75},
@@ -282,6 +283,10 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
   const handleCanvasClick = useHandler((event) => {
     event.preventDefault();
 
+    if (mouseDragRef.current.isRealDragging) {
+      return;
+    }
+
     const {selectedCountry} = gameStateRef.current;
 
     if (guessCountry && selectedCountry) {
@@ -298,17 +303,37 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
   });
 
   const onMouseDown = useHandler(() => {
+    mouseDragRef.current = {
+      x: 0,
+      y: 0,
+      isRealDragging: false,
+    };
     setDragging(true);
   });
 
   const onMouseMove = useHandler((event) => {
     mouseDragRef.current.x += event.movementX;
     mouseDragRef.current.y += event.movementY;
+
+    if (
+      !mouseDragRef.current.isRealDragging &&
+      (Math.abs(mouseDragRef.current.x) > 2 ||
+        Math.abs(mouseDragRef.current.y) > 2)
+    ) {
+      mouseDragRef.current.isRealDragging = true;
+    }
   });
 
-  useWindowPassiveEvent('mouseup', () => {
-    setDragging(false);
-  });
+  useWindowEvent(
+    'mouseup',
+    (event) => {
+      if (mouseDragRef.current.isRealDragging) {
+        event.preventDefault();
+      }
+      setDragging(false);
+    },
+    {capture: true},
+  );
 
   return (
     <>
@@ -323,7 +348,9 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
             width={WIDTH}
             height={HEIGHT}
             onMouseDown={onMouseDown}
-            onClick={handleCanvasClick}
+            onClick={
+              isDragging ? (event) => event.preventDefault() : handleCanvasClick
+            }
           />
           <div className={styles.ui}>
             {guessCountry ? (
