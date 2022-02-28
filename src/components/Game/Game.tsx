@@ -139,12 +139,15 @@ export function Game() {
       deltaDistance = distanceUpdate * passed * ZOOM_SPEED;
     }
 
-    if (mouseDragRef.current.x || mouseDragRef.current.y) {
-      deltaRoll -= mouseDragRef.current.y * MOUSE_DRAG_ROLL_SPEED;
-      deltaSpin -= mouseDragRef.current.x * MOUSE_DRAG_SPIN_SPEED;
+    const mouseDrag = mouseDragRef.current;
 
-      mouseDragRef.current.x = 0;
-      mouseDragRef.current.y = 0;
+    if (mouseDrag.x || mouseDrag.y) {
+      const distanceModifier = directionState.distance / 12;
+      deltaRoll -= mouseDrag.y * MOUSE_DRAG_ROLL_SPEED * distanceModifier;
+      deltaSpin -= mouseDrag.x * MOUSE_DRAG_SPIN_SPEED * distanceModifier;
+
+      mouseDrag.x = 0;
+      mouseDrag.y = 0;
     }
 
     if (deltaRoll || deltaSpin || deltaDistance) {
