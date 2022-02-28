@@ -31,6 +31,9 @@ const ZOOM_SPEED = 12;
 const MINIMAL_DISTANCE = 9;
 const MAXIMUM_DISTANCE = 40;
 
+const MOUSE_DRAG_SPIN_SPEED = 0.0014;
+const MOUSE_DRAG_ROLL_SPEED = 0.001;
+
 type Direction = {
   spin: number;
   roll: number;
@@ -39,7 +42,6 @@ type Direction = {
 type DirectionState = {
   direction: Direction;
   distance: number;
-  lastApplyTs: number | undefined;
 };
 
 export function Game() {
@@ -50,16 +52,18 @@ export function Game() {
   const {fpsCounterRef, tick} = useFpsCounter();
   const mousePosRef = useRef<{x: number; y: number} | undefined>();
   const pressedMap = useMemo<Set<string>>(() => new Set(), []);
+  const mouseDragRef = useRef({x: 0, y: 0});
   const directionState = useMemo<DirectionState>(
     () => ({
       direction: {spin: -2.63, roll: -0.75},
       distance: 12,
-      lastApplyTs: undefined,
     }),
     [],
   );
+  const lastApplyTsRef = useRef<number | undefined>();
   const [guessCountry, setGuessCountry] = useState<CountryInfo | undefined>();
   const alreadyGuessedCountriesRef = useRef<Country[]>([]);
+  const [isDragging, setDragging] = useState(false);
 
   const gameStateRef = useRef<GameState>({selectedCountry: undefined});
 
@@ -69,15 +73,36 @@ export function Game() {
     loadAssets().then(setAssets);
   }, []);
 
+  function updateDirection(
+    callback: (state: DirectionState) => DirectionState,
+  ) {
+    const {direction, distance} = callback(directionState);
+
+    directionState.direction = {
+      roll: bound(direction.roll, -Math.PI * 0.45, Math.PI * 0.45),
+      spin: direction.spin,
+    };
+
+    directionState.distance = bound(
+      distance,
+      MINIMAL_DISTANCE,
+      MAXIMUM_DISTANCE,
+    );
+  }
+
   function applyInput(): void {
     const now = Date.now();
 
-    if (directionState.lastApplyTs) {
-      const passed = (now - directionState.lastApplyTs) / 1000;
+    let deltaRoll = 0;
+    let deltaSpin = 0;
+    let deltaDistance = 0;
+
+    if (lastApplyTsRef.current) {
+      const passed = (now - lastApplyTsRef.current) / 1000;
 
       let x = 0;
       let y = 0;
-      let distance = 0;
+      let distanceUpdate = 0;
 
       if (pressedMap.has('KeyA')) {
         x -= 1;
@@ -96,11 +121,11 @@ export function Game() {
       }
 
       if (pressedMap.has('KeyE')) {
-        distance -= 1;
+        distanceUpdate -= 1;
       }
 
       if (pressedMap.has('KeyQ')) {
-        distance += 1;
+        distanceUpdate += 1;
       }
 
       if (x !== 0 && y !== 0) {
@@ -108,22 +133,27 @@ export function Game() {
         y *= 0.71;
       }
 
-      directionState.direction.spin += x * passed * 2 * Math.PI * SPIN_SPEED;
-      directionState.direction.roll += y * passed * 2 * Math.PI * ROLL_SPEED;
+      deltaRoll = y * passed * 2 * Math.PI * ROLL_SPEED;
+      deltaSpin = x * passed * 2 * Math.PI * SPIN_SPEED;
+      deltaDistance = distanceUpdate * passed * ZOOM_SPEED;
+    }
 
-      directionState.direction.roll = bound(
-        directionState.direction.roll,
-        -Math.PI * 0.45,
-        Math.PI * 0.45,
-      );
+    if (mouseDragRef.current.x || mouseDragRef.current.y) {
+      deltaRoll -= mouseDragRef.current.y * MOUSE_DRAG_ROLL_SPEED;
+      deltaSpin -= mouseDragRef.current.x * MOUSE_DRAG_SPIN_SPEED;
 
-      directionState.distance += distance * passed * ZOOM_SPEED;
+      mouseDragRef.current.x = 0;
+      mouseDragRef.current.y = 0;
+    }
 
-      directionState.distance = bound(
-        directionState.distance,
-        MINIMAL_DISTANCE,
-        MAXIMUM_DISTANCE,
-      );
+    if (deltaRoll || deltaSpin || deltaDistance) {
+      updateDirection(({direction: {spin, roll}, distance}) => ({
+        direction: {
+          spin: spin + deltaSpin,
+          roll: roll + deltaRoll,
+        },
+        distance: distance + deltaDistance,
+      }));
 
       const outputElement = document.getElementById('output');
       if (outputElement) {
@@ -135,7 +165,7 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
       }
     }
 
-    directionState.lastApplyTs = now;
+    lastApplyTsRef.current = now;
   }
 
   useEffect(() => {
@@ -267,15 +297,32 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
     }
   });
 
+  const onMouseDown = useHandler(() => {
+    setDragging(true);
+  });
+
+  const onMouseMove = useHandler((event) => {
+    mouseDragRef.current.x += event.movementX;
+    mouseDragRef.current.y += event.movementY;
+  });
+
+  useWindowPassiveEvent('mouseup', () => {
+    setDragging(false);
+  });
+
   return (
     <>
       <div className={styles.root}>
-        <div className={styles.viewport}>
+        <div
+          className={styles.viewport}
+          onMouseMove={isDragging ? onMouseMove : undefined}
+        >
           <canvas
             ref={canvasRef}
             className={styles.canvas}
             width={WIDTH}
             height={HEIGHT}
+            onMouseDown={onMouseDown}
             onClick={handleCanvasClick}
           />
           <div className={styles.ui}>
@@ -323,9 +370,9 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
           <pre>
             Controls:
             <br />
-            Rotate globe by &lt;WSAD&gt;
+            Spin globe by mouse drag or &lt;WSAD&gt;
             <br />
-            Zoom in/out by by &lt;Q&gt; and &lt;E&gt;
+            Zoom in/out by &lt;Q&gt; and &lt;E&gt;
           </pre>
           <pre id="output" />
           <pre id="debugOutput" />
