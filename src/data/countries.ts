@@ -18,6 +18,7 @@ export enum Country {
   SPAIN,
   PORTUGAL,
   CROATIA,
+  AUSTRALIA,
 }
 
 enum Tag {
@@ -190,6 +191,14 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
       color: 0x49,
       title: 'Croatia',
       tags: [Tag.Europa, Tag.EuroUnion],
+    },
+  ],
+  [
+    Country.AUSTRALIA,
+    {
+      color: 0x83,
+      title: 'Australia',
+      tags: [],
     },
   ],
 ]);
