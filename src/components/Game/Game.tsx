@@ -227,8 +227,8 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
   }, [assets]);
 
   useWindowPassiveEvent<MouseEvent>('mousemove', (event) => {
-    const x = event.offsetX;
-    const y = event.offsetY;
+    const x = event.pageX;
+    const y = event.pageY;
 
     if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) {
       mousePosRef.current = undefined;
