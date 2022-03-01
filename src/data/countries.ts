@@ -15,13 +15,22 @@ export enum Country {
   SWEDEN,
   NORWAY,
   DENMARK,
-  PORTUGAL,
   SPAIN,
+  PORTUGAL,
+  CROATIA,
+}
+
+enum Tag {
+  EuroUnion = 1,
+  Europa,
+  Asia,
+  America,
 }
 
 type CountryDetails = {
   color: number;
   title: string;
+  tags: Tag[];
 };
 
 export type CountryInfo = CountryDetails & {
@@ -36,6 +45,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0x7e,
       title: 'Italy',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -43,6 +53,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0xa3,
       title: 'France',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -50,6 +61,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0xad,
       title: 'Belgium',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -57,6 +69,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0x4d,
       title: 'Netherlands',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -64,6 +77,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0xc9,
       title: 'Austria',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -71,6 +85,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0x6a,
       title: 'Switzerland',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -78,6 +93,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0xff,
       title: 'Germany',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -85,6 +101,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0x90,
       title: 'Poland',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -92,6 +109,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0x2e,
       title: 'Czech',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -99,6 +117,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0xb8,
       title: 'Slovakia',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -106,6 +125,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0xb9,
       title: 'Slovenia',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -113,6 +133,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0xe3,
       title: 'Hungary',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -120,6 +141,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0xa1,
       title: 'Finland',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -127,6 +149,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0x7c,
       title: 'Sweden',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -134,6 +157,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0x47, // actual 0x46
       title: 'Norway',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -141,6 +165,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0x5f,
       title: 'Denmark',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -148,6 +173,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0x76,
       title: 'Spain',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
   [
@@ -155,6 +181,15 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     {
       color: 0x8a,
       title: 'Portugal',
+      tags: [Tag.Europa, Tag.EuroUnion],
+    },
+  ],
+  [
+    Country.CROATIA,
+    {
+      color: 0x49,
+      title: 'Croatia',
+      tags: [Tag.Europa, Tag.EuroUnion],
     },
   ],
 ]);
