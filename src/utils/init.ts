@@ -376,6 +376,7 @@ export function initialize(
     renderType: RenderType.DRAW_ARRAYS,
     renderMode: RenderMode.LINES,
     elementsCount: 2,
+    disableDepthTest: true,
   });
 
   const circleBuffers = createSimpleBuffers(gl, models.circle);
@@ -393,6 +394,7 @@ export function initialize(
       shaderProgram: circleShaderProgram,
       vao: circleVao,
       id: 'meridian',
+      disableDepthTest: true,
       matrix: mat4.fromRotation(mat4.create(), 0.25 * i * Math.PI, [0, 1, 0]),
       ...circleBuffers.model,
     });
@@ -402,6 +404,7 @@ export function initialize(
   objects.push({
     shaderProgram: circleShaderProgram,
     vao: circleVao,
+    disableDepthTest: true,
     id: 'equator',
     matrix: mat4.fromRotation(mat4.create(), Math.PI / 2, [1, 0, 0]),
     ...circleBuffers.model,

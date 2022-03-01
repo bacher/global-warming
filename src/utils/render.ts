@@ -46,10 +46,12 @@ export function draw(
     shader: WebGLProgram | undefined;
     vao: WebGLVertexArrayObject | undefined;
     cullFace: CullFace;
+    depthTest: boolean | undefined;
   } = {
     shader: undefined,
     vao: undefined,
     cullFace: gl.BACK,
+    depthTest: undefined,
   };
 
   function setShaderProgram(program: WebGLProgram) {
@@ -73,6 +75,17 @@ export function draw(
     }
   }
 
+  function setDepthTest(enable: boolean) {
+    if (current.depthTest !== enable) {
+      if (enable) {
+        gl.enable(gl.DEPTH_TEST);
+      } else {
+        gl.disable(gl.DEPTH_TEST);
+      }
+      current.depthTest = enable;
+    }
+  }
+
   const matrix = mat4.clone(cameraMatrix);
   mat4.translate(matrix, matrix, [0, 0, -options.distance]);
   mat4.rotateX(matrix, matrix, -options.direction.roll);
@@ -84,6 +97,7 @@ export function draw(
     setShaderProgram(obj.shaderProgram.program);
     setVao(obj.vao);
     setCullFace(obj.cullFace ?? CullFace.BACK);
+    setDepthTest(!obj.disableDepthTest);
 
     let uMatrix: mat4;
 
@@ -154,9 +168,7 @@ export function draw(
         gl.drawElements(obj.renderMode, obj.elementsCount, obj.indexType, 0);
         break;
       case RenderType.DRAW_ARRAYS:
-        gl.disable(gl.DEPTH_TEST);
         gl.drawArrays(obj.renderMode, 0, obj.elementsCount);
-        gl.enable(gl.DEPTH_TEST);
         break;
     }
   }

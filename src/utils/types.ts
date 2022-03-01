@@ -37,6 +37,7 @@ export type CommonSceneObjectType = {
   id: string;
   matrix?: mat4;
   cullFace?: CullFace;
+  disableDepthTest?: boolean;
 };
 
 export type ModelRenderInfo = {
