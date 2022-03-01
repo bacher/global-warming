@@ -1,6 +1,6 @@
 {
   "name": "global-warming",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "private": true,
   "dependencies": {
     "@types/node": "^16.11.22",
