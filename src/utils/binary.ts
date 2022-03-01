@@ -1,10 +1,4 @@
-export type ModelData = {
-  facesCount: number;
-  positionData: Float32Array;
-  normalData: Float32Array;
-  uvData: Float32Array;
-  indexData: Uint16Array;
-};
+import type {ModelData} from './modelTypes';
 
 export function parseBinModel(buffer: ArrayBuffer): ModelData {
   const headerSize = 8;

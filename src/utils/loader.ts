@@ -1,4 +1,6 @@
-import {ModelData, parseBinModel} from './binary';
+import type {ModelData, SimpleMesh} from './modelTypes';
+import {parseBinModel} from './binary';
+import {generateCircle} from './generateShapes';
 
 async function loadTexture(textureName: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -26,12 +28,15 @@ async function loadModel(modelName: string): Promise<ModelData> {
 }
 
 export type Assets = {
-  modelData: ModelData;
+  models: {
+    earth: ModelData;
+    circle: SimpleMesh;
+  };
   textures: Record<string, HTMLImageElement>;
 };
 
 export async function loadAssets(): Promise<Assets> {
-  const [modelData, earth, countries, area] = await Promise.all([
+  const [earthModel, earth, countries, area] = await Promise.all([
     loadModel(`${process.env.PUBLIC_URL}/earth.bin`),
     loadTexture(`${process.env.PUBLIC_URL}/textures/earth_compress.png`),
     loadTexture(`${process.env.PUBLIC_URL}/textures/earth_countries.png`),
@@ -39,7 +44,10 @@ export async function loadAssets(): Promise<Assets> {
   ]);
 
   return {
-    modelData,
+    models: {
+      earth: earthModel,
+      circle: generateCircle({radius: Math.PI, segments: 64, width: 0.007}),
+    },
     textures: {
       earth,
       countries,

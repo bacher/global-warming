@@ -206,7 +206,7 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
         distance: directionState.distance,
         debugOnFrame: ({matrix}) => {
           const ctx = debugCanvasRef.current!.getContext('2d')!;
-          const modelData = assets!.modelData;
+          const modelData = assets!.models.earth;
 
           debugFrame({
             ctx,

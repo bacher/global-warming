@@ -1,6 +1,6 @@
 import {vec3, mat4} from 'gl-matrix';
 
-import type {ModelData} from './binary';
+import type {ModelData} from './modelTypes';
 import {
   applyInterpolation,
   getInterpolationRatios,

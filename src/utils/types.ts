@@ -1,6 +1,7 @@
-import {vec2, vec3, vec4} from 'gl-matrix';
+import type {mat4, vec2, vec3, vec4} from 'gl-matrix';
 
 import type {Country} from '../data/countries';
+import {RenderType} from './modelTypes';
 
 export type Point2d = [number, number];
 
@@ -25,31 +26,39 @@ export type ShaderProgram = {
   };
 };
 
-export enum RenderType {
-  DRAW_ARRAYS,
-  DRAW_ELEMENTS,
+export enum CullFace {
+  FRONT = 0x0404,
+  BACK = 0x0405,
 }
 
-export type DrawElementsObject = {
+export type CommonSceneObjectType = {
+  shaderProgram: ShaderProgram;
+  vao: WebGLVertexArrayObject;
+  id: string;
+  matrix?: mat4;
+  cullFace?: CullFace;
+};
+
+export type ModelRenderInfo = {
   renderType: RenderType.DRAW_ELEMENTS;
   renderMode: GLenum;
   indexType: GLenum; // gl.UNSIGNED_SHORT | gl.UNSIGNED_INT
   elementsCount: number;
 };
 
-export type DrawArraysObject = {
+export type DrawElementsObject = CommonSceneObjectType & ModelRenderInfo;
+
+export type SimpleModelRenderInfo = {
   renderType: RenderType.DRAW_ARRAYS;
   renderMode: GLenum;
   elementsCount: number;
 };
 
+export type DrawArraysObject = CommonSceneObjectType & SimpleModelRenderInfo;
+
 export type SceneObject = DrawElementsObject | DrawArraysObject;
 
 export type Scene = {
-  shaderProgram: ShaderProgram;
-  vao: WebGLVertexArrayObject;
-  linesVao: WebGLVertexArrayObject;
-  lineShaderProgram: ShaderProgram;
   lineBuffer: WebGLBuffer;
   objects: SceneObject[];
 };

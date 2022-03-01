@@ -7,12 +7,15 @@ import type {
   ShaderProgram,
   VertexShaderInfo,
 } from './types';
-import {RenderType} from './types';
-import type {ModelData} from './binary';
+import {RenderMode, RenderType, ModelData, SimpleMesh} from './modelTypes';
 import {matrixVertexShaderInfo} from '../shaders/matrix.vertex';
 import {textureMixFragmentShaderInfo} from '../shaders/textureMix.fragment';
 import {simpleFragmentShaderInfo} from '../shaders/simple.fragment';
+import {equatorVertexShaderInfo} from '../shaders/equator.vertex';
+import {equatorFragmentShaderInfo} from '../shaders/equator.fragment';
 import type {Assets} from './loader';
+import {CullFace, ModelRenderInfo, SimpleModelRenderInfo} from './types';
+import {mat4} from 'gl-matrix';
 
 function createShader(
   gl: WebGL2RenderingContext,
@@ -131,8 +134,8 @@ function createShaderProgram(
 export function createBuffers(
   gl: WebGL2RenderingContext,
   modelData: ModelData,
-  objects: SceneObject[],
 ): {
+  model: ModelRenderInfo;
   positionBuffer: WebGLBuffer;
   uvBuffer: WebGLBuffer;
   indexBuffer: WebGLBuffer;
@@ -162,17 +165,38 @@ export function createBuffers(
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, modelData.indexData, gl.STATIC_DRAW);
 
-  objects.push({
-    renderType: RenderType.DRAW_ELEMENTS,
-    renderMode: gl.TRIANGLES,
-    indexType: gl.UNSIGNED_SHORT,
-    elementsCount: modelData.facesCount * 3,
-  });
-
   return {
+    model: {
+      renderType: RenderType.DRAW_ELEMENTS,
+      renderMode: gl.TRIANGLES,
+      indexType: gl.UNSIGNED_SHORT,
+      elementsCount: modelData.facesCount * 3,
+    },
     positionBuffer,
     uvBuffer,
     indexBuffer,
+  };
+}
+
+function createSimpleBuffers(
+  gl: WebGL2RenderingContext,
+  modelData: SimpleMesh,
+): {positionBuffer: WebGLBuffer; model: SimpleModelRenderInfo} {
+  const positionBuffer = gl.createBuffer();
+  if (!positionBuffer) {
+    throw new Error('Cant create buffer');
+  }
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, modelData.positionData, gl.STATIC_DRAW);
+
+  return {
+    model: {
+      renderType: RenderType.DRAW_ARRAYS,
+      renderMode: RenderMode.TRIANGLE_STRIP,
+      elementsCount: modelData.verticesCount,
+    },
+    positionBuffer,
   };
 }
 
@@ -275,7 +299,7 @@ export function createVao(
 
 export function initialize(
   gl: WebGL2RenderingContext,
-  {modelData, textures}: Assets,
+  {models, textures}: Assets,
 ): Scene {
   const shaderProgram = createShaderProgram(
     gl,
@@ -289,12 +313,17 @@ export function initialize(
     simpleFragmentShaderInfo,
   );
 
+  const circleShaderProgram = createShaderProgram(
+    gl,
+    equatorVertexShaderInfo,
+    equatorFragmentShaderInfo,
+  );
+
   const objects: SceneObject[] = [];
 
-  const {indexBuffer, positionBuffer, uvBuffer} = createBuffers(
+  const {indexBuffer, positionBuffer, uvBuffer, model} = createBuffers(
     gl,
-    modelData,
-    objects,
+    models.earth,
   );
 
   const earthTexture = createTexture(gl, textures.earth, 0, true);
@@ -316,6 +345,18 @@ export function initialize(
   gl.uniform1i(shaderProgram.locations.getUniform('u_texture'), 0);
   gl.uniform1i(shaderProgram.locations.getUniform('u_texture2'), 1);
 
+  const earthMatrix = mat4.create();
+  mat4.fromRotation(earthMatrix, -0.064 * Math.PI, [0, 1, 0]);
+  mat4.scale(earthMatrix, earthMatrix, [-1, -1, -1]);
+  objects.push({
+    ...model,
+    id: 'earth',
+    matrix: earthMatrix,
+    shaderProgram,
+    vao,
+    cullFace: CullFace.FRONT,
+  });
+
   const lineBuffer = createLineBuffer(
     gl,
     new Float32Array([10, 0, 0, -10, 0, 0]),
@@ -328,25 +369,52 @@ export function initialize(
     },
   });
 
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-  gl.clearColor(0, 0, 0, 0);
-  // gl.clearDepth(0);
-
-  gl.enable(gl.CULL_FACE);
-  gl.cullFace(gl.FRONT);
-  gl.enable(gl.DEPTH_TEST);
-
   objects.push({
+    shaderProgram: lineShaderProgram,
+    vao: linesVao,
+    id: 'pointerLine',
     renderType: RenderType.DRAW_ARRAYS,
-    renderMode: gl.LINES,
+    renderMode: RenderMode.LINES,
     elementsCount: 2,
   });
 
+  const circleBuffers = createSimpleBuffers(gl, models.circle);
+
+  const circleVao = createVao(gl, {
+    position: {
+      location: circleShaderProgram.locations.getAttribute('a_position'),
+      buffer: circleBuffers.positionBuffer,
+    },
+  });
+
+  // Meridians
+  for (let i = 0; i < 4; i++) {
+    objects.push({
+      shaderProgram: circleShaderProgram,
+      vao: circleVao,
+      id: 'meridian',
+      matrix: mat4.fromRotation(mat4.create(), 0.25 * i * Math.PI, [0, 1, 0]),
+      ...circleBuffers.model,
+    });
+  }
+
+  // Equator
+  objects.push({
+    shaderProgram: circleShaderProgram,
+    vao: circleVao,
+    id: 'equator',
+    matrix: mat4.fromRotation(mat4.create(), Math.PI / 2, [1, 0, 0]),
+    ...circleBuffers.model,
+  });
+
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.clearColor(0, 0, 0, 0);
+
+  gl.enable(gl.CULL_FACE);
+  // gl.cullFace(gl.FRONT);
+  gl.enable(gl.DEPTH_TEST);
+
   return {
-    shaderProgram,
-    vao,
-    lineShaderProgram,
-    linesVao,
     lineBuffer,
     objects,
   };
