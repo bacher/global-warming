@@ -24,6 +24,8 @@ export type ShaderProgram = {
     getUniform: (uniformName: string) => WebGLUniformLocation | null;
     getAttribute: (attributeName: string) => number;
   };
+  setUniformInt: (uniformName: string, value: number) => void;
+  setUniformMat4: (uniformName: string, value: Float32List) => void;
 };
 
 export enum CullFace {

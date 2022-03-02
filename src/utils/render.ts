@@ -15,19 +15,6 @@ type Options = {
   debugOnFrame?: (params: {matrix: mat4}) => void;
 };
 
-function setUniformMatrixData(
-  gl: WebGL2RenderingContext,
-  shaderProgram: ShaderProgram,
-  uniformName: string,
-  value: Float32List,
-) {
-  gl.uniformMatrix4fv(
-    shaderProgram.locations.getUniform(uniformName),
-    false,
-    value,
-  );
-}
-
 function getCameraTransform({aspectRatio}: {aspectRatio: number}): mat4 {
   return mat4.perspective(mat4.create(), Math.PI / 8, aspectRatio, 0.001, 2000);
 }
@@ -111,7 +98,7 @@ export function draw(
       earthMatrix = uMatrix;
     }
 
-    setUniformMatrixData(gl, obj.shaderProgram, 'u_matrix', uMatrix);
+    obj.shaderProgram.setUniformMat4('u_matrix', uMatrix);
 
     if (obj.id === 'pointerLine') {
       if (options.pointer) {
@@ -157,16 +144,19 @@ export function draw(
     }
 
     switch (obj.renderType) {
-      case RenderType.DRAW_ELEMENTS:
-        gl.uniform1ui(
-          obj.shaderProgram.locations.getUniform('u_selected'),
-          (gameState.selectedCountry &&
-            countries.get(gameState.selectedCountry)?.color) ??
-            0,
+      case RenderType.DRAW_ELEMENTS: {
+        const selectedCountry = gameState.selectedCountry
+          ? countries.get(gameState.selectedCountry)
+          : undefined;
+
+        obj.shaderProgram.setUniformInt(
+          'u_selected',
+          selectedCountry?.color ?? 0,
         );
 
         gl.drawElements(obj.renderMode, obj.elementsCount, obj.indexType, 0);
         break;
+      }
       case RenderType.DRAW_ARRAYS:
         gl.drawArrays(obj.renderMode, 0, obj.elementsCount);
         break;
