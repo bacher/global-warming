@@ -12,7 +12,7 @@ import {Country} from '../data/countries';
 const visionDir = vec3.fromValues(0, 0, 1);
 
 type Params = {
-  ctx: CanvasRenderingContext2D;
+  ctx?: CanvasRenderingContext2D;
   matrix: mat4;
   modelData: ModelData;
   cursor?: vec3;
@@ -26,20 +26,22 @@ export function debugFrame({
   cursor,
   gameState,
 }: Params): void {
-  ctx.save();
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, 800, 600);
-  ctx.scale(800 / 2, 600 / 2);
-  ctx.translate(1, 1);
-  ctx.scale(1, -1);
+  if (ctx) {
+    ctx.save();
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, 800, 600);
+    ctx.scale(800 / 2, 600 / 2);
+    ctx.translate(1, 1);
+    ctx.scale(1, -1);
 
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 0.002;
-  // ctx.beginPath();
-  // ctx.moveTo(0, 0);
-  // ctx.lineTo(0.5, 0.5);
-  // ctx.closePath();
-  // ctx.stroke();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 0.002;
+    // ctx.beginPath();
+    // ctx.moveTo(0, 0);
+    // ctx.lineTo(0.5, 0.5);
+    // ctx.closePath();
+    // ctx.stroke();
+  }
 
   const cursorTriangles = [];
 
@@ -72,15 +74,17 @@ export function debugFrame({
       ),
     );
 
-    const dot = vec3.dot(visionDir, normal);
+    if (ctx) {
+      const dot = vec3.dot(visionDir, normal);
 
-    if (dot < 0) {
-      ctx.beginPath();
-      ctx.moveTo(v1np[0], v1np[1]);
-      ctx.lineTo(v2np[0], v2np[1]);
-      ctx.lineTo(v3np[0], v3np[1]);
-      ctx.closePath();
-      ctx.stroke();
+      if (dot < 0) {
+        ctx.beginPath();
+        ctx.moveTo(v1np[0], v1np[1]);
+        ctx.lineTo(v2np[0], v2np[1]);
+        ctx.lineTo(v3np[0], v3np[1]);
+        ctx.closePath();
+        ctx.stroke();
+      }
     }
 
     if (cursor && isPointInTriangle(cursor, v1np, v2np, v3np)) {
@@ -110,16 +114,20 @@ export function debugFrame({
 
     gameState.selectedCountry = countryId;
 
-    ctx.beginPath();
-    ctx.moveTo(v1np[0], v1np[1]);
-    ctx.lineTo(v2np[0], v2np[1]);
-    ctx.lineTo(v3np[0], v3np[1]);
-    ctx.closePath();
-    ctx.fillStyle = countryId ? '#f00' : '#000';
-    ctx.fill();
+    if (ctx) {
+      ctx.beginPath();
+      ctx.moveTo(v1np[0], v1np[1]);
+      ctx.lineTo(v2np[0], v2np[1]);
+      ctx.lineTo(v3np[0], v3np[1]);
+      ctx.closePath();
+      ctx.fillStyle = countryId ? '#f00' : '#000';
+      ctx.fill();
+    }
   } else {
     gameState.selectedCountry = undefined;
   }
 
-  ctx.restore();
+  if (ctx) {
+    ctx.restore();
+  }
 }

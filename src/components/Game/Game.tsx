@@ -65,6 +65,7 @@ export function Game() {
   const [guessCountry, setGuessCountry] = useState<CountryInfo | undefined>();
   const alreadyGuessedCountriesRef = useRef<Country[]>([]);
   const [isDragging, setDragging] = useState(false);
+  const [showDebugCanvas] = useState(false);
 
   const gameStateRef = useRef<GameState>({selectedCountry: undefined});
 
@@ -205,7 +206,7 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
         direction: directionState.direction,
         distance: directionState.distance,
         debugOnFrame: ({matrix}) => {
-          const ctx = debugCanvasRef.current!.getContext('2d')!;
+          const ctx = debugCanvasRef.current?.getContext('2d') ?? undefined;
           const modelData = assets!.models.earth;
 
           debugFrame({
@@ -389,12 +390,14 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
             )}
           </div>
         </div>
-        <canvas
-          ref={debugCanvasRef}
-          className={styles.debugCanvas}
-          width={WIDTH}
-          height={HEIGHT}
-        />
+        {showDebugCanvas && (
+          <canvas
+            ref={debugCanvasRef}
+            className={styles.debugCanvas}
+            width={WIDTH}
+            height={HEIGHT}
+          />
+        )}
         <span ref={fpsCounterRef} className={styles.fpsCounter} />
         <div className={styles.output}>
           <pre>
