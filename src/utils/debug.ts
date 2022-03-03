@@ -1,4 +1,4 @@
-import {vec3, mat4} from 'gl-matrix';
+import {mat4, vec3} from 'gl-matrix';
 
 import type {ModelData} from './modelTypes';
 import {
@@ -7,6 +7,7 @@ import {
   isPointInTriangle,
 } from './math';
 import type {GameState, ViewportSize} from './types';
+import {GameType} from './types';
 
 const visionDir = vec3.fromValues(0, 0, 1);
 
@@ -27,6 +28,10 @@ export function debugFrame({
   gameState,
   viewport,
 }: Params): void {
+  if (gameState.type !== GameType.FIND) {
+    return;
+  }
+
   if (ctx) {
     ctx.save();
     ctx.fillStyle = '#fff';

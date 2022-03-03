@@ -1,7 +1,7 @@
 import {mat4, vec3} from 'gl-matrix';
 
-import type {GameState, Scene, ShaderProgram} from './types';
-import {CullFace} from './types';
+import type {GameState, Scene} from './types';
+import {CullFace, GameType} from './types';
 import {countries} from '../data/countries';
 import {RenderType} from './modelTypes';
 
@@ -161,8 +161,13 @@ export function draw(
 
     switch (obj.renderType) {
       case RenderType.DRAW_ELEMENTS: {
-        const selectedCountry = gameState.selectedCountry
-          ? countries.get(gameState.selectedCountry)
+        const selectedCountryId =
+          gameState.type === GameType.FIND
+            ? gameState.selectedCountry
+            : undefined;
+
+        const selectedCountry = selectedCountryId
+          ? countries.get(selectedCountryId)
           : undefined;
 
         obj.shaderProgram.setUniformInt(

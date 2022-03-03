@@ -11,6 +11,7 @@ import {draw} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
 import {debugFrame} from '../../utils/debug';
 import type {GameState, ViewportSize} from '../../utils/types';
+import {GameType} from '../../utils/types';
 import {bound} from '../../utils/math';
 import {formatNumber} from '../../utils/format';
 import {useFpsCounter} from '../../hooks/useFpsCounter';
@@ -18,7 +19,9 @@ import {useWindowPassiveEvent} from '../../hooks/useWindowPassiveEvent';
 import {useHandler} from '../../hooks/useHandler';
 import {SplashType, useSplash} from '../../hooks/useSplash';
 import {useWindowEvent} from '../../hooks/useWindowEvent';
+import {useRerender} from '../../hooks/useRerender';
 
+import {StartMenu} from '../StartMenu';
 import {CountriesCanvas} from '../CountriesCanvas';
 import styles from './Game.module.scss';
 
@@ -70,14 +73,14 @@ export function Game() {
     [],
   );
   const lastApplyTsRef = useRef<number | undefined>();
-  const [guessCountry, setGuessCountry] = useState<CountryInfo | undefined>();
   const alreadyGuessedCountriesRef = useRef<Country[]>([]);
   const [isDragging, setDragging] = useState(false);
   const [showDebugCanvas] = useState(false);
   const viewportSize = useRef({width: 0, height: 0});
   const currentViewportSizeRef = useRef({width: 0, height: 0});
+  const rerender = useRerender();
 
-  const gameStateRef = useRef<GameState>({selectedCountry: undefined});
+  const gameStateRef = useRef<GameState>({type: GameType.MENU});
 
   const {splashText, showSplashText} = useSplash();
 
@@ -313,29 +316,58 @@ export function Game() {
 
   const startGame = useHandler(() => {
     alreadyGuessedCountriesRef.current = [];
+
     const country = getRandomCountryExcept(alreadyGuessedCountriesRef.current);
-    setGuessCountry(country);
+
+    if (country) {
+      const gameState = gameStateRef.current;
+
+      gameStateRef.current = {
+        type: GameType.FIND,
+        guessCountry: country,
+        selectedCountry:
+          gameState.type === GameType.FIND
+            ? gameState.selectedCountry
+            : undefined,
+      };
+    } else {
+      gameStateRef.current = {
+        type: GameType.MENU,
+      };
+    }
+    rerender();
+  });
+
+  const onDiscoverClick = useHandler(() => {
+    gameStateRef.current = {
+      type: GameType.DISCOVERY,
+    };
+    rerender();
   });
 
   const nextCountry = useHandler(() => {
-    if (guessCountry) {
-      alreadyGuessedCountriesRef.current.push(guessCountry.id);
+    if (gameStateRef.current.type !== GameType.FIND) {
+      return;
     }
+
+    const {guessCountry} = gameStateRef.current;
+
+    alreadyGuessedCountriesRef.current.push(guessCountry.id);
 
     const country = getRandomCountryExcept(alreadyGuessedCountriesRef.current);
 
     if (!country) {
       showSplashText('You guessed all countries!');
-      setGuessCountry(undefined);
+
+      gameStateRef.current = {
+        type: GameType.MENU,
+      };
+      rerender();
       return;
     }
 
-    setGuessCountry(country);
-  });
-
-  const onStartGameClick = useHandler((event) => {
-    event.preventDefault();
-    startGame();
+    gameStateRef.current.guessCountry = country;
+    rerender();
   });
 
   const handleCanvasClick = useHandler((event) => {
@@ -345,18 +377,25 @@ export function Game() {
       return;
     }
 
-    const {selectedCountry} = gameStateRef.current;
+    const gameState = gameStateRef.current;
 
-    if (guessCountry && selectedCountry) {
-      if (guessCountry.id === selectedCountry) {
-        showSplashText('You are right!');
-        nextCountry();
-      } else {
-        showSplashText('You missed, try again!', {
-          type: SplashType.BAD,
-          timeout: 3000,
-        });
-      }
+    switch (gameState.type) {
+      case GameType.FIND:
+        if (gameState.guessCountry && gameState.selectedCountry) {
+          if (gameState.guessCountry.id === gameState.selectedCountry) {
+            showSplashText('You are right!');
+            nextCountry();
+          } else {
+            showSplashText('You missed, try again!', {
+              type: SplashType.BAD,
+              timeout: 3000,
+            });
+          }
+        }
+        break;
+      case GameType.DISCOVERY:
+        window.alert('Not ready yet');
+        break;
     }
   });
 
@@ -418,37 +457,43 @@ export function Game() {
             }
           />
           <div className={styles.ui}>
-            {guessCountry ? (
-              <>
-                <div className={styles.column}>
-                  <p className={styles.gameText}>
-                    Guess the "{guessCountry.title}"
-                  </p>
-                </div>
-                {splashText && (
-                  <div className={styles.upper}>
-                    <p
-                      className={cn(styles.splashText, {
-                        [styles.splashTextBad]:
-                          splashText.type === SplashType.BAD,
-                      })}
-                    >
-                      {splashText.text}
-                    </p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className={styles.centered}>
-                <button
-                  type="button"
-                  className={styles.startButton}
-                  onClick={onStartGameClick}
-                >
-                  Start the Game
-                </button>
-              </div>
-            )}
+            {(() => {
+              switch (gameStateRef.current.type) {
+                case GameType.FIND:
+                  return (
+                    <>
+                      <div className={styles.column}>
+                        <p className={styles.gameText}>
+                          Guess the "{gameStateRef.current.guessCountry.title}"
+                        </p>
+                      </div>
+                      {splashText && (
+                        <div className={styles.upper}>
+                          <p
+                            className={cn(styles.splashText, {
+                              [styles.splashTextBad]:
+                                splashText.type === SplashType.BAD,
+                            })}
+                          >
+                            {splashText.text}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  );
+                case GameType.MENU:
+                  return (
+                    <div className={styles.centered}>
+                      <StartMenu
+                        onGameStart={startGame}
+                        onDiscoveryStart={onDiscoverClick}
+                      />
+                    </div>
+                  );
+                default:
+                  return undefined;
+              }
+            })()}
           </div>
         </div>
         {showDebugCanvas && (
