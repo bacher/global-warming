@@ -6,8 +6,7 @@ import {
   getInterpolationRatios,
   isPointInTriangle,
 } from './math';
-import type {GameState} from './types';
-import {Country} from '../data/countries';
+import type {GameState, ViewportSize} from './types';
 
 const visionDir = vec3.fromValues(0, 0, 1);
 
@@ -17,6 +16,7 @@ type Params = {
   modelData: ModelData;
   cursor?: vec3;
   gameState: GameState;
+  viewport: ViewportSize;
 };
 
 export function debugFrame({
@@ -25,12 +25,13 @@ export function debugFrame({
   modelData,
   cursor,
   gameState,
+  viewport,
 }: Params): void {
   if (ctx) {
     ctx.save();
     ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, 800, 600);
-    ctx.scale(800 / 2, 600 / 2);
+    ctx.fillRect(0, 0, viewport.width, viewport.height);
+    ctx.scale(viewport.width / 2, viewport.height / 2);
     ctx.translate(1, 1);
     ctx.scale(1, -1);
 

@@ -10,7 +10,7 @@ import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
 import {debugFrame} from '../../utils/debug';
-import {GameState} from '../../utils/types';
+import type {GameState, ViewportSize} from '../../utils/types';
 import {bound} from '../../utils/math';
 import {formatNumber} from '../../utils/format';
 import {useFpsCounter} from '../../hooks/useFpsCounter';
@@ -21,9 +21,6 @@ import {useWindowEvent} from '../../hooks/useWindowEvent';
 
 import {CountriesCanvas} from '../CountriesCanvas';
 import styles from './Game.module.scss';
-
-const WIDTH = 800;
-const HEIGHT = 600;
 
 const SPIN_SPEED = 0.16;
 const ROLL_SPEED = 0.14;
@@ -44,6 +41,17 @@ type DirectionState = {
   direction: Direction;
   distance: number;
 };
+
+function printDirection(directionState: DirectionState): void {
+  const outputElement = document.getElementById('output');
+  if (outputElement) {
+    outputElement.innerText = `Roll: ${formatNumber(
+      directionState.direction.roll,
+    )}rad
+Spin: ${formatNumber(directionState.direction.spin)}rad
+Distance: ${formatNumber(directionState.distance, 0)}`;
+  }
+}
 
 export function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -66,13 +74,20 @@ export function Game() {
   const alreadyGuessedCountriesRef = useRef<Country[]>([]);
   const [isDragging, setDragging] = useState(false);
   const [showDebugCanvas] = useState(false);
+  const viewportSize = useRef({width: 0, height: 0});
+  const currentViewportSizeRef = useRef({width: 0, height: 0});
 
   const gameStateRef = useRef<GameState>({selectedCountry: undefined});
 
   const {splashText, showSplashText} = useSplash();
 
   useEffect(() => {
+    viewportSize.current.width = window.innerWidth;
+    viewportSize.current.height = window.innerHeight;
+
     loadAssets().then(setAssets);
+
+    printDirection(directionState);
   }, []);
 
   function updateDirection(
@@ -160,17 +175,36 @@ export function Game() {
         distance: distance + deltaDistance,
       }));
 
-      const outputElement = document.getElementById('output');
-      if (outputElement) {
-        outputElement.innerText = `Roll: ${formatNumber(
-          directionState.direction.roll,
-        )}rad
-Spin: ${formatNumber(directionState.direction.spin)}rad
-Distance: ${formatNumber(directionState.distance, 0)}`;
-      }
+      printDirection(directionState);
     }
 
     lastApplyTsRef.current = now;
+  }
+
+  function updateCanvasSize(): ViewportSize {
+    const vp = viewportSize.current;
+    const currentVp = currentViewportSizeRef.current;
+
+    const canvas = canvasRef.current;
+
+    if (!canvas) {
+      throw new Error();
+    }
+
+    if (vp.width !== currentVp.width || vp.height !== currentVp.height) {
+      currentVp.width = vp.width;
+      currentVp.height = vp.height;
+
+      canvas.width = currentVp.width;
+      canvas.height = currentVp.height;
+
+      if (debugCanvasRef.current) {
+        debugCanvasRef.current.width = currentVp.width;
+        debugCanvasRef.current.height = currentVp.height;
+      }
+    }
+
+    return currentVp;
   }
 
   useEffect(() => {
@@ -190,16 +224,26 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
       throw new Error();
     }
 
+    updateCanvasSize();
+
     const scene = initialize(gl, assets);
 
     timeRef.current = Date.now() - 20000;
 
+    let requestId: number | undefined;
+
     function doRender() {
+      if (!canvas || !gl) {
+        throw new Error();
+      }
+
       applyInput();
 
-      draw(gl!, scene, gameStateRef.current, {
-        width: WIDTH,
-        height: HEIGHT,
+      const viewportSize = updateCanvasSize();
+
+      draw(gl, scene, gameStateRef.current, {
+        width: viewportSize.width,
+        height: viewportSize.height,
         time: Date.now() - timeRef.current,
         // time: 0,
         pointer: mousePosRef.current,
@@ -217,26 +261,36 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
               ? [mousePosRef.current.x, mousePosRef.current.y, 0]
               : undefined,
             gameState: gameStateRef.current,
+            viewport: viewportSize,
           });
         },
       });
+
       tick();
-      requestAnimationFrame(doRender);
+      requestId = window.requestAnimationFrame(doRender);
     }
 
     doRender();
+
+    return () => {
+      if (requestId) {
+        window.cancelAnimationFrame(requestId);
+      }
+    };
   }, [assets]);
 
   useWindowPassiveEvent<MouseEvent>('mousemove', (event) => {
     const x = event.pageX;
     const y = event.pageY;
 
-    if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) {
+    const {width, height} = viewportSize.current;
+
+    if (x < 0 || x >= width || y < 0 || y >= height) {
       mousePosRef.current = undefined;
     } else {
       mousePosRef.current = {
-        x: x / (WIDTH / 2) - 1,
-        y: (y / (HEIGHT / 2) - 1) * -1,
+        x: x / (width / 2) - 1,
+        y: (y / (height / 2) - 1) * -1,
       };
     }
   });
@@ -339,6 +393,13 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
     {capture: true},
   );
 
+  useWindowPassiveEvent('resize', () => {
+    viewportSize.current = {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+  });
+
   return (
     <>
       <div className={styles.root}>
@@ -349,8 +410,8 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
           <canvas
             ref={canvasRef}
             className={styles.canvas}
-            width={WIDTH}
-            height={HEIGHT}
+            width="0"
+            height="0"
             onMouseDown={onMouseDown}
             onClick={
               isDragging ? (event) => event.preventDefault() : handleCanvasClick
@@ -394,12 +455,12 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
           <canvas
             ref={debugCanvasRef}
             className={styles.debugCanvas}
-            width={WIDTH}
-            height={HEIGHT}
+            width="0"
+            height="0"
           />
         )}
-        <span ref={fpsCounterRef} className={styles.fpsCounter} />
         <div className={styles.output}>
+          <pre ref={fpsCounterRef}>0</pre>
           <pre>
             Controls:
             <br />
@@ -407,8 +468,8 @@ Distance: ${formatNumber(directionState.distance, 0)}`;
             <br />
             Zoom in/out by &lt;Q&gt; and &lt;E&gt;
           </pre>
-          <pre id="output" />
-          <pre id="debugOutput" />
+          <pre id="output">&nbsp;</pre>
+          <pre id="debugOutput">&nbsp;</pre>
         </div>
       </div>
       {assets && <CountriesCanvas image={assets.textures.area} />}

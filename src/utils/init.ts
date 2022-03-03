@@ -354,6 +354,7 @@ export function initialize(
   const earthMatrix = mat4.create();
   mat4.fromRotation(earthMatrix, -0.064 * Math.PI, [0, 1, 0]);
   mat4.scale(earthMatrix, earthMatrix, [-1, -1, -1]);
+
   objects.push({
     ...model,
     id: 'earth',

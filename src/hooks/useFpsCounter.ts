@@ -3,7 +3,7 @@ import {useEffect, useRef} from 'react';
 import {useTabActive} from './useTabActive';
 
 export function useFpsCounter() {
-  const fpsCounterRef = useRef<HTMLSpanElement>(null);
+  const fpsCounterRef = useRef<HTMLPreElement>(null);
   const framesCountRef = useRef(0);
   const isActive = useTabActive();
 

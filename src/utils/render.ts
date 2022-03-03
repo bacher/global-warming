@@ -19,7 +19,13 @@ function getCameraTransform({aspectRatio}: {aspectRatio: number}): mat4 {
   return mat4.perspective(mat4.create(), Math.PI / 8, aspectRatio, 0.001, 2000);
 }
 
-const cameraMatrix = getCameraTransform({aspectRatio: 800 / 600});
+const cameraMatrixData: {
+  matrix: mat4 | undefined;
+  aspectRatio: number | undefined;
+} = {
+  matrix: undefined,
+  aspectRatio: undefined,
+};
 
 export function draw(
   gl: WebGL2RenderingContext,
@@ -27,7 +33,17 @@ export function draw(
   gameState: GameState,
   options: Options,
 ) {
+  const aspectRatio = options.width / options.height;
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  if (
+    !cameraMatrixData.matrix ||
+    cameraMatrixData.aspectRatio !== aspectRatio
+  ) {
+    cameraMatrixData.matrix = getCameraTransform({aspectRatio});
+    cameraMatrixData.aspectRatio = aspectRatio;
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  }
 
   const current: {
     shader: WebGLProgram | undefined;
@@ -73,7 +89,7 @@ export function draw(
     }
   }
 
-  const matrix = mat4.clone(cameraMatrix);
+  const matrix = mat4.clone(cameraMatrixData.matrix);
   mat4.translate(matrix, matrix, [0, 0, -options.distance]);
   mat4.rotateX(matrix, matrix, -options.direction.roll);
   mat4.rotateY(matrix, matrix, -options.direction.spin);
