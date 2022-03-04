@@ -1,11 +1,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import cn from 'classnames';
 
-import {
-  Country,
-  CountryInfo,
-  getRandomCountryExcept,
-} from '../../data/countries';
+import {Country, getRandomCountryExcept} from '../../data/countries';
 import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
@@ -28,6 +24,7 @@ import styles from './Game.module.scss';
 const SPIN_SPEED = 0.16;
 const ROLL_SPEED = 0.14;
 const ZOOM_SPEED = 12;
+const MENU_SPIN_SPEED = 0.1;
 
 const MINIMAL_DISTANCE = 9;
 const MAXIMUM_DISTANCE = 40;
@@ -84,6 +81,17 @@ export function Game() {
 
   const {splashText, showSplashText} = useSplash();
 
+  function isInGame(): boolean {
+    return (
+      gameStateRef.current.type === GameType.FIND ||
+      gameStateRef.current.type === GameType.DISCOVERY
+    );
+  }
+
+  useEffect(() => {
+    setDragging(false);
+  }, [gameStateRef.current.type]);
+
   useEffect(() => {
     viewportSize.current.width = window.innerWidth;
     viewportSize.current.height = window.innerHeight;
@@ -110,63 +118,70 @@ export function Game() {
     );
   }
 
-  function applyInput(): void {
+  function updateGameState(): void {
     const now = Date.now();
 
     let deltaRoll = 0;
     let deltaSpin = 0;
     let deltaDistance = 0;
 
-    if (lastApplyTsRef.current) {
-      const passed = (now - lastApplyTsRef.current) / 1000;
+    if (isInGame()) {
+      if (lastApplyTsRef.current) {
+        const passed = (now - lastApplyTsRef.current) / 1000;
 
-      let x = 0;
-      let y = 0;
-      let distanceUpdate = 0;
+        let x = 0;
+        let y = 0;
+        let distanceUpdate = 0;
 
-      if (pressedMap.has('KeyA')) {
-        x -= 1;
+        if (pressedMap.has('KeyA')) {
+          x -= 1;
+        }
+
+        if (pressedMap.has('KeyD')) {
+          x += 1;
+        }
+
+        if (pressedMap.has('KeyW')) {
+          y -= 1;
+        }
+
+        if (pressedMap.has('KeyS')) {
+          y += 1;
+        }
+
+        if (pressedMap.has('KeyE')) {
+          distanceUpdate -= 1;
+        }
+
+        if (pressedMap.has('KeyQ')) {
+          distanceUpdate += 1;
+        }
+
+        if (x !== 0 && y !== 0) {
+          x *= 0.71;
+          y *= 0.71;
+        }
+
+        deltaRoll = y * passed * 2 * Math.PI * ROLL_SPEED;
+        deltaSpin = x * passed * 2 * Math.PI * SPIN_SPEED;
+        deltaDistance = distanceUpdate * passed * ZOOM_SPEED;
       }
 
-      if (pressedMap.has('KeyD')) {
-        x += 1;
+      const mouseDrag = mouseDragRef.current;
+
+      if (mouseDrag.x || mouseDrag.y) {
+        const distanceModifier = directionState.distance / 12;
+        deltaRoll -= mouseDrag.y * MOUSE_DRAG_ROLL_SPEED * distanceModifier;
+        deltaSpin -= mouseDrag.x * MOUSE_DRAG_SPIN_SPEED * distanceModifier;
+
+        mouseDrag.x = 0;
+        mouseDrag.y = 0;
       }
-
-      if (pressedMap.has('KeyW')) {
-        y -= 1;
+    } else {
+      if (lastApplyTsRef.current) {
+        const passed = (now - lastApplyTsRef.current) / 1000;
+        deltaSpin = MENU_SPIN_SPEED * passed * 2 * Math.PI * SPIN_SPEED;
       }
-
-      if (pressedMap.has('KeyS')) {
-        y += 1;
-      }
-
-      if (pressedMap.has('KeyE')) {
-        distanceUpdate -= 1;
-      }
-
-      if (pressedMap.has('KeyQ')) {
-        distanceUpdate += 1;
-      }
-
-      if (x !== 0 && y !== 0) {
-        x *= 0.71;
-        y *= 0.71;
-      }
-
-      deltaRoll = y * passed * 2 * Math.PI * ROLL_SPEED;
-      deltaSpin = x * passed * 2 * Math.PI * SPIN_SPEED;
-      deltaDistance = distanceUpdate * passed * ZOOM_SPEED;
-    }
-
-    const mouseDrag = mouseDragRef.current;
-
-    if (mouseDrag.x || mouseDrag.y) {
-      const distanceModifier = directionState.distance / 12;
-      deltaRoll -= mouseDrag.y * MOUSE_DRAG_ROLL_SPEED * distanceModifier;
-      deltaSpin -= mouseDrag.x * MOUSE_DRAG_SPIN_SPEED * distanceModifier;
-
-      mouseDrag.x = 0;
-      mouseDrag.y = 0;
     }
 
     if (deltaRoll || deltaSpin || deltaDistance) {
@@ -240,7 +255,7 @@ export function Game() {
         throw new Error();
       }
 
-      applyInput();
+      updateGameState();
 
       const viewportSize = updateCanvasSize();
 
@@ -400,6 +415,10 @@ export function Game() {
   });
 
   const onMouseDown = useHandler(() => {
+    if (!isInGame()) {
+      return;
+    }
+
     mouseDragRef.current = {
       x: 0,
       y: 0,
