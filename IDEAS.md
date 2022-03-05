@@ -1,6 +1,6 @@
 # Ideas
 
-- [ ] Inspect mode
+- [x] Discovery mode
 - [ ] Add capitals
 - [ ] Add flags
 - [ ] Add flag constructor quiz
