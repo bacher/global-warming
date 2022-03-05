@@ -89,4 +89,5 @@ export type GameState =
     }
   | {
       type: GameType.DISCOVERY;
+      selectedCountry: Country | undefined;
     };

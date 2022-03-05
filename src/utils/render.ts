@@ -162,7 +162,8 @@ export function draw(
     switch (obj.renderType) {
       case RenderType.DRAW_ELEMENTS: {
         const selectedCountryId =
-          gameState.type === GameType.FIND
+          gameState.type === GameType.FIND ||
+          gameState.type === GameType.DISCOVERY
             ? gameState.selectedCountry
             : undefined;
 

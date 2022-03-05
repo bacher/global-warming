@@ -8,6 +8,7 @@ import {
 } from './math';
 import type {GameState, ViewportSize} from './types';
 import {GameType} from './types';
+import {Country} from '../data/countries';
 
 const visionDir = vec3.fromValues(0, 0, 1);
 
@@ -18,6 +19,7 @@ type Params = {
   cursor?: vec3;
   gameState: GameState;
   viewport: ViewportSize;
+  onSelectedCountryChange: (countryId: Country | undefined) => void;
 };
 
 export function debugFrame({
@@ -25,10 +27,14 @@ export function debugFrame({
   matrix,
   modelData,
   cursor,
-  gameState,
   viewport,
+  gameState,
+  onSelectedCountryChange,
 }: Params): void {
-  if (gameState.type !== GameType.FIND) {
+  if (
+    gameState.type !== GameType.FIND &&
+    gameState.type !== GameType.DISCOVERY
+  ) {
     return;
   }
 
@@ -118,7 +124,7 @@ export function debugFrame({
     // @ts-ignore
     const countryId = window.lookupCountryByUv?.(uv);
 
-    gameState.selectedCountry = countryId;
+    onSelectedCountryChange(countryId);
 
     if (ctx) {
       ctx.beginPath();
@@ -130,7 +136,7 @@ export function debugFrame({
       ctx.fill();
     }
   } else {
-    gameState.selectedCountry = undefined;
+    onSelectedCountryChange(undefined);
   }
 
   if (ctx) {

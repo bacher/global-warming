@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import cn from 'classnames';
 
-import {Country, getRandomCountryExcept} from '../../data/countries';
+import {countries, Country, getRandomCountryExcept} from '../../data/countries';
 import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
@@ -278,8 +278,20 @@ export function Game() {
             cursor: mousePosRef.current
               ? [mousePosRef.current.x, mousePosRef.current.y, 0]
               : undefined,
-            gameState: gameStateRef.current,
             viewport: viewportSize,
+            gameState: gameStateRef.current,
+            onSelectedCountryChange: (selectedCountry) => {
+              const state = gameStateRef.current;
+
+              if (
+                (state.type === GameType.FIND ||
+                  state.type === GameType.DISCOVERY) &&
+                state.selectedCountry !== selectedCountry
+              ) {
+                state.selectedCountry = selectedCountry;
+                rerender();
+              }
+            },
           });
         },
       });
@@ -356,6 +368,7 @@ export function Game() {
   const onDiscoverClick = useHandler(() => {
     gameStateRef.current = {
       type: GameType.DISCOVERY,
+      selectedCountry: undefined,
     };
     rerender();
   });
@@ -408,9 +421,8 @@ export function Game() {
           }
         }
         break;
-      case GameType.DISCOVERY:
-        window.alert('Not ready yet');
-        break;
+      default:
+      // do nothing
     }
   });
 
@@ -500,6 +512,26 @@ export function Game() {
                       )}
                     </>
                   );
+                case GameType.DISCOVERY: {
+                  const {selectedCountry} = gameStateRef.current;
+
+                  if (!selectedCountry) {
+                    return undefined;
+                  }
+                  const country = countries.get(selectedCountry);
+
+                  if (!country) {
+                    return undefined;
+                  }
+
+                  return (
+                    <div className={styles.column}>
+                      <p className={styles.gameText}>
+                        Country: "{country.title}"
+                      </p>
+                    </div>
+                  );
+                }
                 case GameType.MENU:
                   return (
                     <div className={styles.centered}>
