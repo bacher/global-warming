@@ -72,6 +72,16 @@ export type Scene = {
   objects: SceneObject[];
 };
 
+export type Direction = {
+  spin: number;
+  roll: number;
+};
+
+export type DirectionState = {
+  direction: Direction;
+  distance: number;
+};
+
 export enum GameType {
   MENU = 1,
   FIND,

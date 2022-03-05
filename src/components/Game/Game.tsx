@@ -6,7 +6,7 @@ import {initialize} from '../../utils/init';
 import {draw} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
 import {debugFrame} from '../../utils/debug';
-import type {GameState, ViewportSize} from '../../utils/types';
+import type {DirectionState, GameState, ViewportSize} from '../../utils/types';
 import {GameType} from '../../utils/types';
 import {bound} from '../../utils/math';
 import {formatNumber} from '../../utils/format';
@@ -16,6 +16,7 @@ import {useHandler} from '../../hooks/useHandler';
 import {SplashType, useSplash} from '../../hooks/useSplash';
 import {useWindowEvent} from '../../hooks/useWindowEvent';
 import {useRerender} from '../../hooks/useRerender';
+import {createIntroAnimation, IntroAnimation} from '../../utils/animations';
 
 import {StartMenu} from '../StartMenu';
 import {CountriesCanvas} from '../CountriesCanvas';
@@ -31,16 +32,6 @@ const MAXIMUM_DISTANCE = 40;
 
 const MOUSE_DRAG_SPIN_SPEED = 0.0014;
 const MOUSE_DRAG_ROLL_SPEED = 0.001;
-
-type Direction = {
-  spin: number;
-  roll: number;
-};
-
-type DirectionState = {
-  direction: Direction;
-  distance: number;
-};
 
 function printDirection(directionState: DirectionState): void {
   const outputElement = document.getElementById('output');
@@ -65,7 +56,7 @@ export function Game() {
   const directionState = useMemo<DirectionState>(
     () => ({
       direction: {spin: -2.63, roll: -0.75},
-      distance: 12,
+      distance: 1000,
     }),
     [],
   );
@@ -76,6 +67,7 @@ export function Game() {
   const viewportSize = useRef({width: 0, height: 0});
   const currentViewportSizeRef = useRef({width: 0, height: 0});
   const rerender = useRerender();
+  const introAnimation = useRef<IntroAnimation | undefined>();
 
   const gameStateRef = useRef<GameState>({type: GameType.MENU});
 
@@ -111,11 +103,7 @@ export function Game() {
       spin: direction.spin,
     };
 
-    directionState.distance = bound(
-      distance,
-      MINIMAL_DISTANCE,
-      MAXIMUM_DISTANCE,
-    );
+    directionState.distance = distance;
   }
 
   function updateGameState(): void {
@@ -178,6 +166,8 @@ export function Game() {
         mouseDrag.y = 0;
       }
     } else {
+      introAnimation.current?.update();
+
       if (lastApplyTsRef.current) {
         const passed = (now - lastApplyTsRef.current) / 1000;
         deltaSpin = MENU_SPIN_SPEED * passed * 2 * Math.PI * SPIN_SPEED;
@@ -190,7 +180,9 @@ export function Game() {
           spin: spin + deltaSpin,
           roll: roll + deltaRoll,
         },
-        distance: distance + deltaDistance,
+        distance: deltaDistance
+          ? bound(distance + deltaDistance, MINIMAL_DISTANCE, MAXIMUM_DISTANCE)
+          : distance,
       }));
 
       printDirection(directionState);
@@ -302,7 +294,14 @@ export function Game() {
 
     doRender();
 
+    introAnimation.current = createIntroAnimation(directionState, () => {
+      introAnimation.current = undefined;
+      rerender();
+    });
+
     return () => {
+      introAnimation.current = undefined;
+
       if (requestId) {
         window.cancelAnimationFrame(requestId);
       }
@@ -536,6 +535,7 @@ export function Game() {
                   return (
                     <div className={styles.centered}>
                       <StartMenu
+                        disabled={Boolean(introAnimation.current)}
                         onGameStart={startGame}
                         onDiscoveryStart={onDiscoverClick}
                       />
