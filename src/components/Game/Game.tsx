@@ -1,5 +1,4 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
-import cn from 'classnames';
 
 import {countries, Country, getRandomCountryExcept} from '../../data/countries';
 import {initialize} from '../../utils/init';
@@ -13,7 +12,7 @@ import {formatNumber} from '../../utils/format';
 import {useFpsCounter} from '../../hooks/useFpsCounter';
 import {useWindowPassiveEvent} from '../../hooks/useWindowPassiveEvent';
 import {useHandler} from '../../hooks/useHandler';
-import {SplashType, useSplash} from '../../hooks/useSplash';
+import {SplashStyle, useSplash} from '../../hooks/useSplash';
 import {useWindowEvent} from '../../hooks/useWindowEvent';
 import {useRerender} from '../../hooks/useRerender';
 import {createIntroAnimation, IntroAnimation} from '../../utils/animations';
@@ -38,9 +37,7 @@ const WARMING_TRIES_COUNT = 10;
 function printDirection(directionState: DirectionState): void {
   const outputElement = document.getElementById('output');
   if (outputElement) {
-    outputElement.innerText = `Roll: ${formatNumber(
-      directionState.direction.roll,
-    )}rad
+    outputElement.innerText = `Roll: ${formatNumber(directionState.direction.roll)}rad
 Spin: ${formatNumber(directionState.direction.spin)}rad
 Distance: ${formatNumber(directionState.distance, 0)}`;
   }
@@ -73,7 +70,7 @@ export function Game() {
 
   const gameStateRef = useRef<GameState>({type: GameType.MENU});
 
-  const {splashText, showSplashText} = useSplash();
+  const {splash, showSplashText, showBlockText} = useSplash();
 
   function isInGame(): boolean {
     return gameStateRef.current.type !== GameType.MENU;
@@ -92,9 +89,7 @@ export function Game() {
     printDirection(directionState);
   }, []);
 
-  function updateDirection(
-    callback: (state: DirectionState) => DirectionState,
-  ) {
+  function updateDirection(callback: (state: DirectionState) => DirectionState) {
     const {direction, distance} = callback(directionState);
 
     directionState.direction = {
@@ -275,8 +270,8 @@ export function Game() {
               const state = gameStateRef.current;
 
               if (
-                (state.type === GameType.GAME ||
-                  state.type === GameType.QUIZ ||
+                ((state.type === GameType.GAME && state.guessCountry) ||
+                  (state.type === GameType.QUIZ && state.guessCountry) ||
                   state.type === GameType.DISCOVERY) &&
                 state.selectedCountry !== selectedCountry
               ) {
@@ -386,33 +381,30 @@ export function Game() {
     rerender();
   });
 
-  const nextCountry = useHandler(() => {
+  const chooseNextCountry = useHandler(() => {
     if (
       gameStateRef.current.type !== GameType.QUIZ &&
       gameStateRef.current.type !== GameType.GAME
     ) {
-      return;
+      throw new Error();
     }
-
-    const {guessCountry} = gameStateRef.current;
-
-    alreadyGuessedCountriesRef.current.push(guessCountry.id);
 
     const country = getRandomCountryExcept(alreadyGuessedCountriesRef.current);
 
-    if (!country) {
-      // TODO: Add time for text
-      showSplashText('You guessed all countries!');
-
-      gameStateRef.current = {
-        type: GameType.MENU,
-      };
+    if (country) {
+      gameStateRef.current.guessCountry = country;
       rerender();
-      return;
-    }
+    } else {
+      gameStateRef.current.guessCountry = undefined;
+      gameStateRef.current.selectedCountry = undefined;
 
-    gameStateRef.current.guessCountry = country;
-    rerender();
+      showBlockText('You guessed all countries!', {}, () => {
+        gameStateRef.current = {
+          type: GameType.MENU,
+        };
+        rerender();
+      });
+    }
   });
 
   const handleCanvasClick = useHandler((event) => {
@@ -430,23 +422,46 @@ export function Game() {
           if (gameState.guessCountry.id === gameState.selectedCountry) {
             gameState.successCountries.push(gameState.guessCountry.id);
             showSplashText('You are right!');
+            alreadyGuessedCountriesRef.current.push(gameState.guessCountry.id);
+            chooseNextCountry();
           } else {
             gameState.failedCountries.push(gameState.guessCountry.id);
 
             if (gameState.failedCountries.length < WARMING_TRIES_COUNT) {
               showSplashText(
-                `You get wrong, "${gameState.guessCountry.title}" is burned`,
+                <p>
+                  You get wrong
+                  <br />
+                  {gameState.guessCountry.title} is burned
+                </p>,
                 {
-                  type: SplashType.BAD,
+                  type: SplashStyle.SMALL_BAD,
                   timeout: 3000,
                 },
               );
-              nextCountry();
+              alreadyGuessedCountriesRef.current.push(gameState.guessCountry.id);
+              chooseNextCountry();
             } else {
-              showSplashText('Game Over. It was your last try', {
-                type: SplashType.BAD,
-                timeout: 3000,
-              });
+              gameState.selectedCountry = undefined;
+              gameState.guessCountry = undefined;
+
+              showBlockText(
+                <p>
+                  It was your last try
+                  <br />
+                  Game Over
+                </p>,
+                {
+                  type: SplashStyle.BAD,
+                  timeout: 3000,
+                },
+                () => {
+                  gameStateRef.current = {
+                    type: GameType.MENU,
+                  };
+                  rerender();
+                },
+              );
             }
           }
         }
@@ -455,10 +470,10 @@ export function Game() {
         if (gameState.guessCountry && gameState.selectedCountry) {
           if (gameState.guessCountry.id === gameState.selectedCountry) {
             showSplashText('You are right!');
-            nextCountry();
+            chooseNextCountry();
           } else {
             showSplashText('You missed, try again!', {
-              type: SplashType.BAD,
+              type: SplashStyle.BAD,
               timeout: 3000,
             });
           }
@@ -488,8 +503,7 @@ export function Game() {
 
     if (
       !mouseDragRef.current.isRealDragging &&
-      (Math.abs(mouseDragRef.current.x) > 2 ||
-        Math.abs(mouseDragRef.current.y) > 2)
+      (Math.abs(mouseDragRef.current.x) > 2 || Math.abs(mouseDragRef.current.y) > 2)
     ) {
       mouseDragRef.current.isRealDragging = true;
     }
@@ -516,44 +530,47 @@ export function Game() {
   return (
     <>
       <div className={styles.root}>
-        <div
-          className={styles.viewport}
-          onMouseMove={isDragging ? onMouseMove : undefined}
-        >
+        <div className={styles.viewport} onMouseMove={isDragging ? onMouseMove : undefined}>
           <canvas
             ref={canvasRef}
             className={styles.canvas}
             width="0"
             height="0"
             onMouseDown={onMouseDown}
-            onClick={
-              isDragging ? (event) => event.preventDefault() : handleCanvasClick
-            }
+            onClick={isDragging ? (event) => event.preventDefault() : handleCanvasClick}
           />
           <div className={styles.ui}>
             {(() => {
               switch (gameStateRef.current.type) {
                 case GameType.GAME:
-                case GameType.QUIZ:
                   return (
                     <>
-                      <div className={styles.column}>
-                        <p className={styles.gameText}>
-                          Guess the "{gameStateRef.current.guessCountry.title}"
-                        </p>
-                      </div>
-                      {splashText && (
-                        <div className={styles.upper}>
-                          <p
-                            className={cn(styles.splashText, {
-                              [styles.splashTextBad]:
-                                splashText.type === SplashType.BAD,
-                            })}
-                          >
-                            {splashText.text}
+                      {gameStateRef.current.guessCountry && (
+                        <div className={styles.column}>
+                          <p className={styles.gameText}>
+                            <span className={styles.warming}>Global warming</span> is coming, you
+                            have to <span className={styles.cool}>cool</span> the
+                            <br />
+                            <span className={styles.countryName}>
+                              {gameStateRef.current.guessCountry.title}
+                            </span>
                           </p>
                         </div>
                       )}
+                      {splash}
+                    </>
+                  );
+                case GameType.QUIZ:
+                  return (
+                    <>
+                      {gameStateRef.current.guessCountry && (
+                        <div className={styles.column}>
+                          <p className={styles.gameText}>
+                            Guess the "{gameStateRef.current.guessCountry.title}"
+                          </p>
+                        </div>
+                      )}
+                      {splash}
                     </>
                   );
                 case GameType.DISCOVERY: {
@@ -570,9 +587,7 @@ export function Game() {
 
                   return (
                     <div className={styles.column}>
-                      <p className={styles.gameText}>
-                        Country: "{country.title}"
-                      </p>
+                      <p className={styles.gameText}>Country: "{country.title}"</p>
                     </div>
                   );
                 }
@@ -594,12 +609,7 @@ export function Game() {
           </div>
         </div>
         {showDebugCanvas && (
-          <canvas
-            ref={debugCanvasRef}
-            className={styles.debugCanvas}
-            width="0"
-            height="0"
-          />
+          <canvas ref={debugCanvasRef} className={styles.debugCanvas} width="0" height="0" />
         )}
         <div className={styles.output}>
           <pre ref={fpsCounterRef}>0</pre>

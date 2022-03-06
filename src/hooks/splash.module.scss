@@ -1,0 +1,56 @@
+.wrapper {
+  grid-area: screen;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.upper {
+  margin-top: 100px;
+  height: 20%;
+}
+
+.center {
+}
+
+.splashText {
+  line-height: 56px;
+  font-size: 48px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 5px;
+  color: #9effc9;
+  text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5);
+
+  &.splashTextBad {
+    letter-spacing: initial;
+    color: #ff5454;
+  }
+
+  &.splashTextSmallBad {
+    line-height: 40px;
+    font-size: 32px;
+    letter-spacing: initial;
+    color: #ff5454;
+  }
+}
+
+.controls {
+  pointer-events: initial;
+  margin-top: 40px;
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+.menuButton {
+  padding: 8px 16px;
+  border: none;
+  font-size: 32px;
+  line-height: 40px;
+  color: #fff;
+  background: seagreen;
+  appearance: none;
+}

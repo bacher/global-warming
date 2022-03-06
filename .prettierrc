@@ -1,5 +1,5 @@
 trailingComma: 'all'
 arrowParens: 'always'
 singleQuote: true
-printWidth: 80
+printWidth: 100
 bracketSpacing: false

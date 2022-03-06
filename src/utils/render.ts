@@ -39,10 +39,7 @@ export function draw(
   const aspectRatio = options.width / options.height;
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  if (
-    !cameraMatrixData.matrix ||
-    cameraMatrixData.aspectRatio !== aspectRatio
-  ) {
+  if (!cameraMatrixData.matrix || cameraMatrixData.aspectRatio !== aspectRatio) {
     cameraMatrixData.matrix = getCameraTransform({aspectRatio});
     cameraMatrixData.aspectRatio = aspectRatio;
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -124,12 +121,7 @@ export function draw(
         continue;
       }
 
-      updatePointerDirectionBuffer(
-        gl,
-        options.pointer,
-        matrix,
-        scene.lineBuffer,
-      );
+      updatePointerDirectionBuffer(gl, options.pointer, matrix, scene.lineBuffer);
     }
 
     switch (obj.renderType) {
@@ -141,14 +133,9 @@ export function draw(
             ? gameState.selectedCountry
             : undefined;
 
-        const selectedCountry = selectedCountryId
-          ? countries.get(selectedCountryId)
-          : undefined;
+        const selectedCountry = selectedCountryId ? countries.get(selectedCountryId) : undefined;
 
-        obj.shaderProgram.setUniformUInt(
-          'u_selected',
-          selectedCountry?.color ?? 0,
-        );
+        obj.shaderProgram.setUniformUInt('u_selected', selectedCountry?.color ?? 0);
 
         if (gameState.type === GameType.GAME) {
           const uSuccess = new Uint32Array(200);

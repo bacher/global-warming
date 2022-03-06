@@ -21,15 +21,6 @@
   pointer-events: none;
 }
 
-.upper {
-  grid-area: screen;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 35%;
-}
-
 .centered {
   grid-area: screen;
   display: flex;
@@ -51,21 +42,21 @@
   line-height: 32px;
   color: #fff;
   text-shadow: 1px 1px 3px #000;
+  text-align: center;
 }
 
-.splashText {
-  line-height: 56px;
-  font-size: 48px;
-  font-weight: 600;
-  text-align: center;
-  letter-spacing: 5px;
-  color: #9effc9;
-  text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5);
+.warming {
+  color: #ffcaca;
+}
 
-  &.splashTextBad {
-    letter-spacing: initial;
-    color: #ff5454;
-  }
+.cool {
+  color: #b2d2ff;
+}
+
+.countryName {
+  line-height: 38px;
+  font-size: 30px;
+  color: #22ff1a;
 }
 
 .canvas {

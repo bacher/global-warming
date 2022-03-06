@@ -96,14 +96,14 @@ export type GameState =
     }
   | {
       type: GameType.GAME;
-      guessCountry: CountryInfo;
+      guessCountry: CountryInfo | undefined;
       failedCountries: Country[];
       successCountries: Country[];
       selectedCountry: Country | undefined;
     }
   | {
       type: GameType.QUIZ;
-      guessCountry: CountryInfo;
+      guessCountry: CountryInfo | undefined;
       selectedCountry: Country | undefined;
     }
   | {
