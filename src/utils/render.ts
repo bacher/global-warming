@@ -1,9 +1,11 @@
 import {mat4, vec3} from 'gl-matrix';
 
+import {countries} from '../data/countries';
 import type {GameState, Scene} from './types';
 import {CullFace, GameType} from './types';
-import {countries} from '../data/countries';
 import {RenderType} from './modelTypes';
+
+const SHOW_POINTER_DIRECTION = false;
 
 type Options = {
   width: number;
@@ -117,6 +119,10 @@ export function draw(
     obj.shaderProgram.setUniformMat4('u_matrix', uMatrix);
 
     if (obj.id === 'pointerLine') {
+      if (!SHOW_POINTER_DIRECTION) {
+        continue;
+      }
+
       if (options.pointer) {
         const start = vec3.fromValues(options.pointer.x, options.pointer.y, 0);
         const end = vec3.fromValues(options.pointer.x, options.pointer.y, -1);
@@ -162,7 +168,7 @@ export function draw(
     switch (obj.renderType) {
       case RenderType.DRAW_ELEMENTS: {
         const selectedCountryId =
-          gameState.type === GameType.FIND ||
+          gameState.type === GameType.QUIZ ||
           gameState.type === GameType.DISCOVERY
             ? gameState.selectedCountry
             : undefined;

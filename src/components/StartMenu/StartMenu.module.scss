@@ -18,12 +18,20 @@
 
 .startButton {
   pointer-events: initial;
+  padding: 4px 16px;
+  font-size: 24px;
+  line-height: 36px;
+  border: none;
+  appearance: none;
+  cursor: pointer;
+  color: #484848;
+  background: #c4cbc1;
+}
+
+.startButtonMain {
   padding: 8px 16px;
   font-size: 32px;
   line-height: 40px;
-  border: none;
-  appearance: none;
   color: #fff;
-  cursor: pointer;
   background: seagreen;
 }

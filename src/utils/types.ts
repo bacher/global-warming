@@ -1,8 +1,8 @@
 import type {mat4, vec2, vec3, vec4} from 'gl-matrix';
 
 import type {Country} from '../data/countries';
-import {RenderType} from './modelTypes';
 import {CountryInfo} from '../data/countries';
+import {RenderType} from './modelTypes';
 
 export type Point2d = [number, number];
 
@@ -84,7 +84,8 @@ export type DirectionState = {
 
 export enum GameType {
   MENU = 1,
-  FIND,
+  GAME,
+  QUIZ,
   DISCOVERY,
 }
 
@@ -93,7 +94,12 @@ export type GameState =
       type: GameType.MENU;
     }
   | {
-      type: GameType.FIND;
+      type: GameType.GAME;
+      // guessCountry: CountryInfo;
+      selectedCountry: Country | undefined;
+    }
+  | {
+      type: GameType.QUIZ;
       guessCountry: CountryInfo;
       selectedCountry: Country | undefined;
     }

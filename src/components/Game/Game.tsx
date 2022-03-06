@@ -75,7 +75,7 @@ export function Game() {
 
   function isInGame(): boolean {
     return (
-      gameStateRef.current.type === GameType.FIND ||
+      gameStateRef.current.type === GameType.QUIZ ||
       gameStateRef.current.type === GameType.DISCOVERY
     );
   }
@@ -276,7 +276,7 @@ export function Game() {
               const state = gameStateRef.current;
 
               if (
-                (state.type === GameType.FIND ||
+                (state.type === GameType.QUIZ ||
                   state.type === GameType.DISCOVERY) &&
                 state.selectedCountry !== selectedCountry
               ) {
@@ -340,7 +340,15 @@ export function Game() {
     toggleKey(event.code, false);
   });
 
-  const startGame = useHandler(() => {
+  const onStartGameClick = useHandler(() => {
+    gameStateRef.current = {
+      type: GameType.GAME,
+      selectedCountry: undefined,
+    };
+    rerender();
+  });
+
+  const onStartQuizClick = useHandler(() => {
     alreadyGuessedCountriesRef.current = [];
 
     const country = getRandomCountryExcept(alreadyGuessedCountriesRef.current);
@@ -349,10 +357,10 @@ export function Game() {
       const gameState = gameStateRef.current;
 
       gameStateRef.current = {
-        type: GameType.FIND,
+        type: GameType.QUIZ,
         guessCountry: country,
         selectedCountry:
-          gameState.type === GameType.FIND
+          gameState.type === GameType.QUIZ
             ? gameState.selectedCountry
             : undefined,
       };
@@ -373,7 +381,7 @@ export function Game() {
   });
 
   const nextCountry = useHandler(() => {
-    if (gameStateRef.current.type !== GameType.FIND) {
+    if (gameStateRef.current.type !== GameType.QUIZ) {
       return;
     }
 
@@ -407,7 +415,7 @@ export function Game() {
     const gameState = gameStateRef.current;
 
     switch (gameState.type) {
-      case GameType.FIND:
+      case GameType.QUIZ:
         if (gameState.guessCountry && gameState.selectedCountry) {
           if (gameState.guessCountry.id === gameState.selectedCountry) {
             showSplashText('You are right!');
@@ -489,7 +497,7 @@ export function Game() {
           <div className={styles.ui}>
             {(() => {
               switch (gameStateRef.current.type) {
-                case GameType.FIND:
+                case GameType.QUIZ:
                   return (
                     <>
                       <div className={styles.column}>
@@ -536,7 +544,8 @@ export function Game() {
                     <div className={styles.centered}>
                       <StartMenu
                         disabled={Boolean(introAnimation.current)}
-                        onGameStart={startGame}
+                        onGameStart={onStartGameClick}
+                        onQuizStart={onStartQuizClick}
                         onDiscoveryStart={onDiscoverClick}
                       />
                     </div>

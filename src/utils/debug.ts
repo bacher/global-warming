@@ -31,10 +31,7 @@ export function debugFrame({
   gameState,
   onSelectedCountryChange,
 }: Params): void {
-  if (
-    gameState.type !== GameType.FIND &&
-    gameState.type !== GameType.DISCOVERY
-  ) {
+  if (gameState.type === GameType.MENU) {
     return;
   }
 
