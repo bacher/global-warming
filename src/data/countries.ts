@@ -286,3 +286,15 @@ export function getRandomCountryExcept(
 export function getCountryByColor(color: number): Country | undefined {
   return countriesByColor.get(color);
 }
+
+export function mapCountriesToColor(list: Country[]): number[] {
+  return list.map((countryId) => {
+    const country = countries.get(countryId);
+
+    if (!country) {
+      throw new Error();
+    }
+
+    return country.color;
+  });
+}

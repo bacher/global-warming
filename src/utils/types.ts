@@ -30,7 +30,8 @@ export type ShaderProgram = {
     getUniform: (uniformName: string) => WebGLUniformLocation | null;
     getAttribute: (attributeName: string) => number;
   };
-  setUniformInt: (uniformName: string, value: number) => void;
+  setUniformUInt: (uniformName: string, value: number) => void;
+  setUniformUIntArray: (uniformName: string, value: Uint32Array) => void;
   setUniformMat4: (uniformName: string, value: Float32List) => void;
 };
 
@@ -95,7 +96,9 @@ export type GameState =
     }
   | {
       type: GameType.GAME;
-      // guessCountry: CountryInfo;
+      guessCountry: CountryInfo;
+      failedCountries: Country[];
+      successCountries: Country[];
       selectedCountry: Country | undefined;
     }
   | {

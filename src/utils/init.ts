@@ -128,8 +128,11 @@ function createShaderProgram(
       getUniform,
       getAttribute,
     },
-    setUniformInt: (uniformName, value) => {
-      gl.uniform1ui(getUniform('u_selected'), value);
+    setUniformUInt: (uniformName, value) => {
+      gl.uniform1ui(getUniform(uniformName), value);
+    },
+    setUniformUIntArray: (uniformName, array) => {
+      gl.uniform1uiv(getUniform(uniformName), array);
     },
     setUniformMat4: (uniformName, value) => {
       gl.uniformMatrix4fv(getUniform(uniformName), false, value);

@@ -33,6 +33,8 @@ const MAXIMUM_DISTANCE = 40;
 const MOUSE_DRAG_SPIN_SPEED = 0.0014;
 const MOUSE_DRAG_ROLL_SPEED = 0.001;
 
+const WARMING_TRIES_COUNT = 10;
+
 function printDirection(directionState: DirectionState): void {
   const outputElement = document.getElementById('output');
   if (outputElement) {
@@ -74,10 +76,7 @@ export function Game() {
   const {splashText, showSplashText} = useSplash();
 
   function isInGame(): boolean {
-    return (
-      gameStateRef.current.type === GameType.QUIZ ||
-      gameStateRef.current.type === GameType.DISCOVERY
-    );
+    return gameStateRef.current.type !== GameType.MENU;
   }
 
   useEffect(() => {
@@ -276,7 +275,8 @@ export function Game() {
               const state = gameStateRef.current;
 
               if (
-                (state.type === GameType.QUIZ ||
+                (state.type === GameType.GAME ||
+                  state.type === GameType.QUIZ ||
                   state.type === GameType.DISCOVERY) &&
                 state.selectedCountry !== selectedCountry
               ) {
@@ -341,34 +341,40 @@ export function Game() {
   });
 
   const onStartGameClick = useHandler(() => {
+    alreadyGuessedCountriesRef.current = [];
+
+    const country = getRandomCountryExcept([]);
+
+    if (!country) {
+      throw new Error();
+    }
+
     gameStateRef.current = {
       type: GameType.GAME,
+      guessCountry: country,
       selectedCountry: undefined,
+      successCountries: [],
+      failedCountries: [],
     };
+
     rerender();
   });
 
   const onStartQuizClick = useHandler(() => {
     alreadyGuessedCountriesRef.current = [];
 
-    const country = getRandomCountryExcept(alreadyGuessedCountriesRef.current);
+    const country = getRandomCountryExcept([]);
 
-    if (country) {
-      const gameState = gameStateRef.current;
-
-      gameStateRef.current = {
-        type: GameType.QUIZ,
-        guessCountry: country,
-        selectedCountry:
-          gameState.type === GameType.QUIZ
-            ? gameState.selectedCountry
-            : undefined,
-      };
-    } else {
-      gameStateRef.current = {
-        type: GameType.MENU,
-      };
+    if (!country) {
+      throw new Error();
     }
+
+    gameStateRef.current = {
+      type: GameType.QUIZ,
+      guessCountry: country,
+      selectedCountry: undefined,
+    };
+
     rerender();
   });
 
@@ -381,7 +387,10 @@ export function Game() {
   });
 
   const nextCountry = useHandler(() => {
-    if (gameStateRef.current.type !== GameType.QUIZ) {
+    if (
+      gameStateRef.current.type !== GameType.QUIZ &&
+      gameStateRef.current.type !== GameType.GAME
+    ) {
       return;
     }
 
@@ -392,6 +401,7 @@ export function Game() {
     const country = getRandomCountryExcept(alreadyGuessedCountriesRef.current);
 
     if (!country) {
+      // TODO: Add time for text
       showSplashText('You guessed all countries!');
 
       gameStateRef.current = {
@@ -415,6 +425,32 @@ export function Game() {
     const gameState = gameStateRef.current;
 
     switch (gameState.type) {
+      case GameType.GAME:
+        if (gameState.guessCountry && gameState.selectedCountry) {
+          if (gameState.guessCountry.id === gameState.selectedCountry) {
+            gameState.successCountries.push(gameState.guessCountry.id);
+            showSplashText('You are right!');
+          } else {
+            gameState.failedCountries.push(gameState.guessCountry.id);
+
+            if (gameState.failedCountries.length < WARMING_TRIES_COUNT) {
+              showSplashText(
+                `You get wrong, "${gameState.guessCountry.title}" is burned`,
+                {
+                  type: SplashType.BAD,
+                  timeout: 3000,
+                },
+              );
+              nextCountry();
+            } else {
+              showSplashText('Game Over. It was your last try', {
+                type: SplashType.BAD,
+                timeout: 3000,
+              });
+            }
+          }
+        }
+        break;
       case GameType.QUIZ:
         if (gameState.guessCountry && gameState.selectedCountry) {
           if (gameState.guessCountry.id === gameState.selectedCountry) {
@@ -497,6 +533,7 @@ export function Game() {
           <div className={styles.ui}>
             {(() => {
               switch (gameStateRef.current.type) {
+                case GameType.GAME:
                 case GameType.QUIZ:
                   return (
                     <>
