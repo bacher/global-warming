@@ -237,7 +237,7 @@ export function Game() {
     let requestId: number | undefined;
 
     function doRender() {
-      if (!canvas || !gl) {
+      if (!gl) {
         throw new Error();
       }
 
@@ -420,12 +420,12 @@ export function Game() {
       case GameType.GAME:
         if (gameState.guessCountry && gameState.selectedCountry) {
           if (gameState.guessCountry.id === gameState.selectedCountry) {
-            gameState.successCountries.push(gameState.guessCountry.id);
+            gameState.successCountries = [...gameState.successCountries, gameState.guessCountry.id];
             showSplashText('You are right!');
             alreadyGuessedCountriesRef.current.push(gameState.guessCountry.id);
             chooseNextCountry();
           } else {
-            gameState.failedCountries.push(gameState.guessCountry.id);
+            gameState.failedCountries = [...gameState.failedCountries, gameState.guessCountry.id];
 
             if (gameState.failedCountries.length < WARMING_TRIES_COUNT) {
               showSplashText(

@@ -3,6 +3,8 @@
 - [x] Discovery mode
 - [ ] Improve animation ease functions
 - [ ] Mouse lock while spinning
+- [ ] Do not rerender if nothing is changed
+- [ ] Smooth country selecting
 - [ ] Add capitals
 - [ ] Zoom by scroll
 - [ ] Add flags

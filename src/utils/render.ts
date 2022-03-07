@@ -30,6 +30,22 @@ const cameraMatrixData: {
   aspectRatio: undefined,
 };
 
+const current: {
+  shader: WebGLProgram | undefined;
+  vao: WebGLVertexArrayObject | undefined;
+  cullFace: CullFace;
+  depthTest: boolean | undefined;
+  successCountries: unknown | undefined;
+  failedCountries: unknown | undefined;
+} = {
+  shader: undefined,
+  vao: undefined,
+  cullFace: CullFace.BACK,
+  depthTest: undefined,
+  successCountries: undefined,
+  failedCountries: undefined,
+};
+
 export function draw(
   gl: WebGL2RenderingContext,
   scene: Scene,
@@ -44,18 +60,6 @@ export function draw(
     cameraMatrixData.aspectRatio = aspectRatio;
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   }
-
-  const current: {
-    shader: WebGLProgram | undefined;
-    vao: WebGLVertexArrayObject | undefined;
-    cullFace: CullFace;
-    depthTest: boolean | undefined;
-  } = {
-    shader: undefined,
-    vao: undefined,
-    cullFace: gl.BACK,
-    depthTest: undefined,
-  };
 
   function setShaderProgram(program: WebGLProgram) {
     if (current.shader !== program) {
@@ -138,12 +142,21 @@ export function draw(
         obj.shaderProgram.setUniformUInt('u_selected', selectedCountry?.color ?? 0);
 
         if (gameState.type === GameType.GAME) {
-          const uSuccess = new Uint32Array(200);
-          const uFailed = new Uint32Array(10);
-          uSuccess.set(mapCountriesToColor(gameState.successCountries));
-          uFailed.set(mapCountriesToColor(gameState.failedCountries));
-          obj.shaderProgram.setUniformUIntArray('u_success', uSuccess);
-          obj.shaderProgram.setUniformUIntArray('u_failed', uFailed);
+          if (current.successCountries !== gameState.successCountries) {
+            current.successCountries = gameState.successCountries;
+
+            const uSuccess = new Uint32Array(200);
+            uSuccess.set(mapCountriesToColor(gameState.successCountries));
+            obj.shaderProgram.setUniformUIntArray('u_success', uSuccess);
+          }
+
+          if (current.failedCountries !== gameState.failedCountries) {
+            current.failedCountries = gameState.failedCountries;
+
+            const uFailed = new Uint32Array(10);
+            uFailed.set(mapCountriesToColor(gameState.failedCountries));
+            obj.shaderProgram.setUniformUIntArray('u_failed', uFailed);
+          }
         }
 
         gl.drawElements(obj.renderMode, obj.elementsCount, obj.indexType, 0);
