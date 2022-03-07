@@ -10,7 +10,7 @@ export function useFpsCounter() {
   function drawFps(fps: number | undefined) {
     const element = fpsCounterRef.current;
     if (element) {
-      element.innerText = fps?.toString() ?? '';
+      element.innerHTML = fps !== undefined ? `FPS: ${fps}` : '&nbsp;';
     }
   }
 

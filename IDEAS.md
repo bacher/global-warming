@@ -4,7 +4,8 @@
 - [ ] Improve animation ease functions
 - [ ] Mouse lock while spinning
 - [x] Do not rerender if nothing is changed
-- [ ] Smooth country selecting
+- [ ] Smooth country selection
+- [ ] Smooth country area render
 - [ ] Add capitals
 - [ ] Zoom by scroll
 - [ ] Add flags

@@ -629,7 +629,7 @@ export function Game() {
           <canvas ref={debugCanvasRef} className={styles.debugCanvas} width="0" height="0" />
         )}
         <div className={styles.output}>
-          <pre ref={fpsCounterRef}>0</pre>
+          <pre ref={fpsCounterRef}>&nbsp;</pre>
           <pre>
             Controls:
             <br />
