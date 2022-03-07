@@ -1,10 +1,11 @@
+import {mat4, vec3} from 'gl-matrix';
 import {useEffect, useMemo, useRef, useState} from 'react';
 
 import {countries, Country, getRandomCountryExcept} from '../../data/countries';
 import {initialize} from '../../utils/init';
 import {compareDrawParams, draw, DrawParams} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
-import {debugFrame} from '../../utils/debug';
+import {makeMemorizedGetSelectedCountry} from '../../utils/debug';
 import type {DirectionState, GameState, ViewportSize} from '../../utils/types';
 import {GameType} from '../../utils/types';
 import {bound} from '../../utils/math';
@@ -20,7 +21,6 @@ import {createIntroAnimation, IntroAnimation} from '../../utils/animations';
 import {StartMenu} from '../StartMenu';
 import {CountriesCanvas} from '../CountriesCanvas';
 import styles from './Game.module.scss';
-import {mat4} from 'gl-matrix';
 
 const SPIN_SPEED = 0.16;
 const ROLL_SPEED = 0.14;
@@ -71,6 +71,7 @@ export function Game() {
   const gameStateRef = useRef<GameState>({type: GameType.MENU});
   const lastDrawParamsRef = useRef<DrawParams | undefined>();
   const lastEarthMatrixRef = useRef<mat4 | undefined>();
+  const getSelectedCountryMemorized = useMemo(makeMemorizedGetSelectedCountry, []);
 
   const {splash, showSplashText, showBlockText} = useSplash();
 
@@ -263,30 +264,30 @@ export function Game() {
         tick();
       }
 
-      debugFrame({
-        ctx: debugCanvasRef.current?.getContext('2d') ?? undefined,
-        matrix: lastEarthMatrixRef.current!,
-        modelData: assets!.models.earth,
-        cursor: mousePosRef.current ? [mousePosRef.current.x, mousePosRef.current.y, 0] : undefined,
-        viewport: viewportSize,
-        gameState: gameStateRef.current,
-        onSelectedCountryChange: (selectedCountry) => {
-          const gameState = gameStateRef.current;
+      const gameState = gameStateRef.current;
 
-          if (
-            ((gameState.type === GameType.GAME && gameState.guessCountry) ||
-              (gameState.type === GameType.QUIZ && gameState.guessCountry) ||
-              gameState.type === GameType.DISCOVERY) &&
-            gameState.selectedCountry !== selectedCountry
-          ) {
-            gameStateRef.current = {
-              ...gameState,
-              selectedCountry,
-            };
-            rerender();
-          }
-        },
-      });
+      if (
+        (gameState.type === GameType.GAME && gameState.guessCountry) ||
+        (gameState.type === GameType.QUIZ && gameState.guessCountry) ||
+        gameState.type === GameType.DISCOVERY
+      ) {
+        let selectedCountry: Country | undefined;
+
+        if (mousePosRef.current) {
+          selectedCountry = getSelectedCountryMemorized({
+            matrix: lastEarthMatrixRef.current!,
+            modelData: assets!.models.earth,
+            cursor: mousePosRef.current,
+          });
+        }
+
+        if (gameState.selectedCountry !== selectedCountry) {
+          gameStateRef.current = {
+            ...gameState,
+            selectedCountry,
+          };
+        }
+      }
 
       requestId = window.requestAnimationFrame(doRender);
     }

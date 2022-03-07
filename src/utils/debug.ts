@@ -1,57 +1,18 @@
 import {mat4, vec3} from 'gl-matrix';
 
+import type {Country} from '../data/countries';
 import type {ModelData} from './modelTypes';
-import {
-  applyInterpolation,
-  getInterpolationRatios,
-  isPointInTriangle,
-} from './math';
-import type {GameState, ViewportSize} from './types';
-import {GameType} from './types';
-import {Country} from '../data/countries';
-
-const visionDir = vec3.fromValues(0, 0, 1);
+import {applyInterpolation, getInterpolationRatios, isPointInTriangle} from './math';
+import {Point2d} from './types';
 
 type Params = {
-  ctx?: CanvasRenderingContext2D;
   matrix: mat4;
   modelData: ModelData;
-  cursor?: vec3;
-  gameState: GameState;
-  viewport: ViewportSize;
-  onSelectedCountryChange: (countryId: Country | undefined) => void;
+  cursor: {x: number; y: number};
 };
 
-export function debugFrame({
-  ctx,
-  matrix,
-  modelData,
-  cursor,
-  viewport,
-  gameState,
-  onSelectedCountryChange,
-}: Params): void {
-  if (gameState.type === GameType.MENU) {
-    return;
-  }
-
-  if (ctx) {
-    ctx.save();
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, viewport.width, viewport.height);
-    ctx.scale(viewport.width / 2, viewport.height / 2);
-    ctx.translate(1, 1);
-    ctx.scale(1, -1);
-
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 0.002;
-    // ctx.beginPath();
-    // ctx.moveTo(0, 0);
-    // ctx.lineTo(0.5, 0.5);
-    // ctx.closePath();
-    // ctx.stroke();
-  }
-
+export function getSelectedCountry({matrix, modelData, cursor}: Params): Country | undefined {
+  const cursorVec: Point2d = [cursor.x, cursor.y];
   const cursorTriangles = [];
 
   for (let i = 0; i < modelData.indexData.length; i += 3) {
@@ -71,32 +32,7 @@ export function debugFrame({
     const v2np = vec3.transformMat4(vec3.create(), v2p, matrix);
     const v3np = vec3.transformMat4(vec3.create(), v3p, matrix);
 
-    const t1 = vec3.sub(vec3.create(), v2np, v1np);
-    const t2 = vec3.sub(vec3.create(), v3np, v1np);
-
-    const normal = vec3.normalize(
-      vec3.create(),
-      vec3.cross(
-        vec3.create(),
-        vec3.normalize(vec3.create(), t1),
-        vec3.normalize(vec3.create(), t2),
-      ),
-    );
-
-    if (ctx) {
-      const dot = vec3.dot(visionDir, normal);
-
-      if (dot < 0) {
-        ctx.beginPath();
-        ctx.moveTo(v1np[0], v1np[1]);
-        ctx.lineTo(v2np[0], v2np[1]);
-        ctx.lineTo(v3np[0], v3np[1]);
-        ctx.closePath();
-        ctx.stroke();
-      }
-    }
-
-    if (cursor && isPointInTriangle(cursor, v1np, v2np, v3np)) {
+    if (isPointInTriangle(cursorVec, v1np, v2np, v3np)) {
       cursorTriangles.push({
         v1np,
         v2np,
@@ -109,36 +45,40 @@ export function debugFrame({
     }
   }
 
-  if (cursor && cursorTriangles.length) {
-    const {v1np, v2np, v3np, v1uv, v2uv, v3uv} = cursorTriangles.sort(
-      (a, b) => a.sumZ - b.sumZ,
-    )[0];
+  if (cursorTriangles.length) {
+    const {v1np, v2np, v3np, v1uv, v2uv, v3uv} = cursorTriangles.sort((a, b) => a.sumZ - b.sumZ)[0];
 
-    const ratios = getInterpolationRatios([v1np, v2np, v3np], cursor);
+    const ratios = getInterpolationRatios([v1np, v2np, v3np], cursorVec);
 
     const uv = applyInterpolation([v1uv, v2uv, v3uv], ratios);
 
     // @ts-ignore
-    const countryId = window.lookupCountryByUv?.(uv);
+    return window.lookupCountryByUv?.(uv);
+  }
 
-    onSelectedCountryChange(countryId);
+  return undefined;
+}
 
-    if (ctx) {
-      ctx.beginPath();
-      ctx.moveTo(v1np[0], v1np[1]);
-      ctx.lineTo(v2np[0], v2np[1]);
-      ctx.lineTo(v3np[0], v3np[1]);
-      ctx.closePath();
-      ctx.fillStyle = countryId ? '#f00' : '#000';
-      ctx.fill();
+export function makeMemorizedGetSelectedCountry(): typeof getSelectedCountry {
+  let lastCall:
+    | {
+        matrix: mat4;
+        cursor: {x: number; y: number};
+        results: Country | undefined;
+      }
+    | undefined;
+
+  return (params) => {
+    if (!lastCall || lastCall.matrix !== params.matrix || lastCall.cursor !== params.cursor) {
+      lastCall = {
+        matrix: params.matrix,
+        cursor: params.cursor,
+        results: getSelectedCountry(params),
+      };
     }
-  } else {
-    onSelectedCountryChange(undefined);
-  }
 
-  if (ctx) {
-    ctx.restore();
-  }
+    return lastCall.results;
+  };
 }
 
 export function updatePointerDirectionBuffer(
