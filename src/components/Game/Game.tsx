@@ -424,7 +424,7 @@ export function Game() {
             showSplashText('You are right!');
             alreadyGuessedCountriesRef.current.push(gameState.guessCountry.id);
             chooseNextCountry();
-          } else {
+          } else if (!gameState.successCountries.includes(gameState.selectedCountry)) {
             gameState.failedCountries = [...gameState.failedCountries, gameState.guessCountry.id];
 
             if (gameState.failedCountries.length < WARMING_TRIES_COUNT) {

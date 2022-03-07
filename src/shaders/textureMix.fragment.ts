@@ -22,17 +22,30 @@ void main() {
   if (country.r > 0.0) {
     uint cur = uint(country.r * 255.0 + 0.5);
   
-    int useMix = 0;
+    bool useMix = false;
+    bool selected = u_selected == cur;
     vec3 mixColor = vec3(0.0, 0.0, 0.0);
     
     for (int i = 0; i < 200; i++) {
-      if (u_success[i] == cur) {
-        mixColor = vec3(0.0, 1.0, 0.0);
-        useMix = 1;
+      uint value = u_success[i];
+    
+      if (value == uint(0)) {
+        break;
+      }
+      
+      if (value == cur) {
+        if (selected) {
+          mixColor = vec3(0.0, 1.0, 0.0);
+        } else {
+          mixColor = vec3(0.0, 0.8, 0.0);
+        }
+        
+        useMix = true;
+        break;
       }
     }
     
-    if (useMix == 0) {
+    if (!useMix) {
       if (
         cur == u_failed[0] ||
         cur == u_failed[1] ||
@@ -45,15 +58,20 @@ void main() {
         cur == u_failed[8] ||
         cur == u_failed[9]
       ) {
-        mixColor = vec3(1.0, 0.0, 0.0);
-        useMix = 1;
+        if (selected) {
+          mixColor = vec3(1.0, 0.0, 0.0);
+        } else {
+          mixColor = vec3(0.85, 0.0, 0.0);
+        }
+        
+        useMix = true;
       } else if (u_selected == cur) {
         mixColor = vec3(1.0, 0.64, 0.0);
-        useMix = 1;
+        useMix = true;
       }
     }
     
-    if (useMix == 1) {
+    if (useMix) {
       outColor = vec4(
         mix(
           solid.rgb,
