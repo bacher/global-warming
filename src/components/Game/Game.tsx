@@ -2,7 +2,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 
 import {countries, Country, getRandomCountryExcept} from '../../data/countries';
 import {initialize} from '../../utils/init';
-import {draw} from '../../utils/render';
+import {compareDrawParams, draw, DrawParams} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
 import {debugFrame} from '../../utils/debug';
 import type {DirectionState, GameState, ViewportSize} from '../../utils/types';
@@ -20,6 +20,7 @@ import {createIntroAnimation, IntroAnimation} from '../../utils/animations';
 import {StartMenu} from '../StartMenu';
 import {CountriesCanvas} from '../CountriesCanvas';
 import styles from './Game.module.scss';
+import {mat4} from 'gl-matrix';
 
 const SPIN_SPEED = 0.16;
 const ROLL_SPEED = 0.14;
@@ -67,8 +68,9 @@ export function Game() {
   const currentViewportSizeRef = useRef({width: 0, height: 0});
   const rerender = useRerender();
   const introAnimation = useRef<IntroAnimation | undefined>();
-
   const gameStateRef = useRef<GameState>({type: GameType.MENU});
+  const lastDrawParamsRef = useRef<DrawParams | undefined>();
+  const lastEarthMatrixRef = useRef<mat4 | undefined>();
 
   const {splash, showSplashText, showBlockText} = useSplash();
 
@@ -245,45 +247,47 @@ export function Game() {
 
       const viewportSize = updateCanvasSize();
 
-      draw(gl, scene, gameStateRef.current, {
+      const drawParams = {
         width: viewportSize.width,
         height: viewportSize.height,
-        time: Date.now() - timeRef.current,
-        // time: 0,
-        pointer: mousePosRef.current,
         direction: directionState.direction,
         distance: directionState.distance,
-        debugOnFrame: ({matrix}) => {
-          const ctx = debugCanvasRef.current?.getContext('2d') ?? undefined;
-          const modelData = assets!.models.earth;
+        gameState: gameStateRef.current,
+      };
 
-          debugFrame({
-            ctx,
-            matrix,
-            modelData,
-            cursor: mousePosRef.current
-              ? [mousePosRef.current.x, mousePosRef.current.y, 0]
-              : undefined,
-            viewport: viewportSize,
-            gameState: gameStateRef.current,
-            onSelectedCountryChange: (selectedCountry) => {
-              const state = gameStateRef.current;
+      if (!lastDrawParamsRef.current || !compareDrawParams(drawParams, lastDrawParamsRef.current)) {
+        lastDrawParamsRef.current = drawParams;
 
-              if (
-                ((state.type === GameType.GAME && state.guessCountry) ||
-                  (state.type === GameType.QUIZ && state.guessCountry) ||
-                  state.type === GameType.DISCOVERY) &&
-                state.selectedCountry !== selectedCountry
-              ) {
-                state.selectedCountry = selectedCountry;
-                rerender();
-              }
-            },
-          });
+        const {earthMatrix} = draw(gl, scene, drawParams);
+        lastEarthMatrixRef.current = earthMatrix;
+        tick();
+      }
+
+      debugFrame({
+        ctx: debugCanvasRef.current?.getContext('2d') ?? undefined,
+        matrix: lastEarthMatrixRef.current!,
+        modelData: assets!.models.earth,
+        cursor: mousePosRef.current ? [mousePosRef.current.x, mousePosRef.current.y, 0] : undefined,
+        viewport: viewportSize,
+        gameState: gameStateRef.current,
+        onSelectedCountryChange: (selectedCountry) => {
+          const gameState = gameStateRef.current;
+
+          if (
+            ((gameState.type === GameType.GAME && gameState.guessCountry) ||
+              (gameState.type === GameType.QUIZ && gameState.guessCountry) ||
+              gameState.type === GameType.DISCOVERY) &&
+            gameState.selectedCountry !== selectedCountry
+          ) {
+            gameStateRef.current = {
+              ...gameState,
+              selectedCountry,
+            };
+            rerender();
+          }
         },
       });
 
-      tick();
       requestId = window.requestAnimationFrame(doRender);
     }
 
@@ -382,21 +386,26 @@ export function Game() {
   });
 
   const chooseNextCountry = useHandler(() => {
-    if (
-      gameStateRef.current.type !== GameType.QUIZ &&
-      gameStateRef.current.type !== GameType.GAME
-    ) {
+    const gameState = gameStateRef.current;
+
+    if (gameState.type !== GameType.QUIZ && gameState.type !== GameType.GAME) {
       throw new Error();
     }
 
     const country = getRandomCountryExcept(alreadyGuessedCountriesRef.current);
 
     if (country) {
-      gameStateRef.current.guessCountry = country;
+      gameStateRef.current = {
+        ...gameState,
+        guessCountry: country,
+      };
       rerender();
     } else {
-      gameStateRef.current.guessCountry = undefined;
-      gameStateRef.current.selectedCountry = undefined;
+      gameStateRef.current = {
+        ...gameState,
+        guessCountry: undefined,
+        selectedCountry: undefined,
+      };
 
       showBlockText('You guessed all countries!', {}, () => {
         gameStateRef.current = {
@@ -420,14 +429,21 @@ export function Game() {
       case GameType.GAME:
         if (gameState.guessCountry && gameState.selectedCountry) {
           if (gameState.guessCountry.id === gameState.selectedCountry) {
-            gameState.successCountries = [...gameState.successCountries, gameState.guessCountry.id];
+            gameStateRef.current = {
+              ...gameState,
+              successCountries: [...gameState.successCountries, gameState.guessCountry.id],
+            };
+
             showSplashText('You are right!');
             alreadyGuessedCountriesRef.current.push(gameState.guessCountry.id);
             chooseNextCountry();
           } else if (!gameState.successCountries.includes(gameState.selectedCountry)) {
-            gameState.failedCountries = [...gameState.failedCountries, gameState.guessCountry.id];
+            gameStateRef.current = {
+              ...gameState,
+              failedCountries: [...gameState.failedCountries, gameState.guessCountry.id],
+            };
 
-            if (gameState.failedCountries.length < WARMING_TRIES_COUNT) {
+            if (gameStateRef.current.failedCountries.length < WARMING_TRIES_COUNT) {
               showSplashText(
                 <p>
                   You get wrong

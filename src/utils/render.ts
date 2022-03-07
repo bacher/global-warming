@@ -6,15 +6,15 @@ import {CullFace, GameType} from './types';
 import {RenderType} from './modelTypes';
 import {updatePointerDirectionBuffer} from './debug';
 
-const SHOW_POINTER_DIRECTION = false;
-
-type Options = {
+export type DrawParams = {
   width: number;
   height: number;
-  time: number;
-  pointer: {x: number; y: number} | undefined;
   direction: {spin: number; roll: number};
   distance: number;
+  gameState: GameState;
+};
+
+export type DrawCallbacks = {
   debugOnFrame?: (params: {matrix: mat4}) => void;
 };
 
@@ -49,10 +49,11 @@ const current: {
 export function draw(
   gl: WebGL2RenderingContext,
   scene: Scene,
-  gameState: GameState,
-  options: Options,
-) {
-  const aspectRatio = options.width / options.height;
+  params: DrawParams,
+): {earthMatrix: mat4} {
+  const {gameState} = params;
+
+  const aspectRatio = params.width / params.height;
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   if (!cameraMatrixData.matrix || cameraMatrixData.aspectRatio !== aspectRatio) {
@@ -94,9 +95,9 @@ export function draw(
   }
 
   const matrix = mat4.clone(cameraMatrixData.matrix);
-  mat4.translate(matrix, matrix, [0, 0, -options.distance]);
-  mat4.rotateX(matrix, matrix, -options.direction.roll);
-  mat4.rotateY(matrix, matrix, -options.direction.spin);
+  mat4.translate(matrix, matrix, [0, 0, -params.distance]);
+  mat4.rotateX(matrix, matrix, -params.direction.roll);
+  mat4.rotateY(matrix, matrix, -params.direction.spin);
 
   let earthMatrix: mat4;
 
@@ -121,11 +122,13 @@ export function draw(
     obj.shaderProgram.setUniformMat4('u_matrix', uMatrix);
 
     if (obj.id === 'pointerLine') {
-      if (!SHOW_POINTER_DIRECTION || !options.pointer) {
+      continue;
+      /*
+      if (!params.pointer) {
         continue;
       }
-
-      updatePointerDirectionBuffer(gl, options.pointer, matrix, scene.lineBuffer);
+      updatePointerDirectionBuffer(gl, params.pointer, matrix, scene.lineBuffer);
+       */
     }
 
     switch (obj.renderType) {
@@ -168,9 +171,17 @@ export function draw(
     }
   }
 
-  if (options.debugOnFrame) {
-    options.debugOnFrame({
-      matrix: earthMatrix!,
-    });
-  }
+  return {
+    earthMatrix: earthMatrix!,
+  };
+}
+
+export function compareDrawParams(p1: DrawParams, p2: DrawParams): boolean {
+  return (
+    p1.width === p2.width &&
+    p1.height === p2.height &&
+    p1.gameState === p2.gameState &&
+    p1.direction === p2.direction &&
+    p1.distance === p2.distance
+  );
 }
