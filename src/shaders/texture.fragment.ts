@@ -19,17 +19,15 @@ void main() {
   vec4 color = texture(u_texture, v_texcoord);
   vec4 colorB = texture(u_texture2, v_texcoord2);
  
-  /*
   if (color[0] == 0.0) {
-    outColor = colorB;
+    // outColor = colorB;
     // outColor = vec4(0.3,0.3,0.0,1.0);
-    return;
+    discard;
   }
-   */
 
-  outColor = vec4(mix(colorB.rgb, color.rgb, color.r), 1);
+  // outColor = vec4(mix(outColor.rgb, color.rgb, color.r), 1);
   // outColor = colorB;
-  // outColor = color;
+  outColor = color;
 }
 `,
   uniforms: ['u_texture', 'u_texture2'],

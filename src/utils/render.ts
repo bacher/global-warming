@@ -115,6 +115,7 @@ export function draw(
   gl.bindFramebuffer(gl.FRAMEBUFFER, scene.countriesFrameBuffer);
   gl.viewport(0, 0, TEXTURE_SIZE.width, TEXTURE_SIZE.height);
   // gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
   gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -191,6 +192,7 @@ export function draw(
         obj.shaderProgram.setUniformInt('u_texture2', textureIndex);
          */
 
+        /*
         gl.bindTexture(gl.TEXTURE_2D, (window as any).t3);
         gl.copyTexImage2D(
           gl.TEXTURE_2D,
@@ -202,6 +204,7 @@ export function draw(
           TEXTURE_SIZE.height,
           0,
         );
+         */
 
         gl.drawArrays(obj.renderMode, 0, obj.elementsCount);
       }
