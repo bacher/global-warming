@@ -1,6 +1,6 @@
 import type {FragmentShaderInfo} from '../utils/types';
 
-export const textureFragmentShaderInfo: FragmentShaderInfo = {
+export const texture2FragmentShaderInfo: FragmentShaderInfo = {
   source: `#version 300 es
 
 // fragment shaders don't have a default precision so we need
@@ -27,7 +27,8 @@ void main() {
   }
    */
 
-  outColor = vec4(mix(colorB.rgb, color.rgb, color.r), 1);
+  vec4 cc = vec4(mix(colorB.rgb, color.rgb, color.r), 1);
+  outColor = vec4(0, cc.r, 0, 1);
   // outColor = colorB;
   // outColor = color;
 }

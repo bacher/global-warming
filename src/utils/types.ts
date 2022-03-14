@@ -30,23 +30,39 @@ export type ShaderProgram = {
     getUniform: (uniformName: string) => WebGLUniformLocation | null;
     getAttribute: (attributeName: string) => number;
   };
+  setUniformInt: (uniformName: string, value: number) => void;
   setUniformUInt: (uniformName: string, value: number) => void;
   setUniformUIntArray: (uniformName: string, value: Uint32Array) => void;
   setUniformMat4: (uniformName: string, value: Float32List) => void;
 };
 
+export type VaoObject = {
+  vao: WebGLVertexArrayObject;
+  positionBuffer: WebGLBuffer;
+  uvBuffer: WebGLBuffer | undefined;
+};
+
 export enum CullFace {
+  OFF = 0x0,
   FRONT = 0x0404,
   BACK = 0x0405,
 }
 
+export enum ObjectType {
+  EARTH = 1,
+  CIRCLE,
+  COUNTRIES,
+  LINE,
+}
+
 export type CommonSceneObjectType = {
-  shaderProgram: ShaderProgram;
-  vao: WebGLVertexArrayObject;
   id: string;
+  vao: VaoObject;
+  objectType: ObjectType;
   matrix?: mat4;
   cullFace?: CullFace;
   disableDepthTest?: boolean;
+  hidden?: boolean;
 };
 
 export type ModelRenderInfo = {
@@ -68,9 +84,20 @@ export type DrawArraysObject = CommonSceneObjectType & SimpleModelRenderInfo;
 
 export type SceneObject = DrawElementsObject | DrawArraysObject;
 
+export type Shaders = {
+  main: ShaderProgram;
+  line: ShaderProgram;
+  countries: ShaderProgram;
+  countriesRed: ShaderProgram;
+  circle: ShaderProgram;
+};
+
 export type Scene = {
-  lineBuffer: WebGLBuffer;
   objects: SceneObject[];
+  shaders: Shaders;
+  frameBufferObjects: SceneObject[];
+  lineBuffer: WebGLBuffer;
+  countriesFrameBuffer: WebGLFramebuffer;
 };
 
 export type Direction = {

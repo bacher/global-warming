@@ -225,7 +225,7 @@ export function Game() {
       throw new Error();
     }
 
-    const gl = canvas.getContext('webgl2');
+    const gl = canvas.getContext('webgl2', {preserveDrawingBuffer: true});
 
     if (!gl) {
       throw new Error();

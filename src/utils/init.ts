@@ -5,23 +5,24 @@ import type {
   Scene,
   SceneObject,
   ShaderProgram,
+  VaoObject,
   VertexShaderInfo,
 } from './types';
-import {RenderMode, RenderType, ModelData, SimpleMesh} from './modelTypes';
+import {CullFace, ModelRenderInfo, ObjectType, SimpleModelRenderInfo} from './types';
+import {ModelData, RenderMode, RenderType, SimpleMesh} from './modelTypes';
 import {matrixVertexShaderInfo} from '../shaders/matrix.vertex';
 import {textureMixFragmentShaderInfo} from '../shaders/textureMix.fragment';
 import {simpleFragmentShaderInfo} from '../shaders/simple.fragment';
 import {equatorVertexShaderInfo} from '../shaders/equator.vertex';
 import {equatorFragmentShaderInfo} from '../shaders/equator.fragment';
 import type {Assets} from './loader';
-import {CullFace, ModelRenderInfo, SimpleModelRenderInfo} from './types';
 import {mat4} from 'gl-matrix';
+import {TEXTURE_SIZE} from '../data/textures';
+import {simpleVertexShaderInfo} from '../shaders/simple.vertex';
+import {textureFragmentShaderInfo} from '../shaders/texture.fragment';
+import {texture2FragmentShaderInfo} from '../shaders/texture2.fragment';
 
-function createShader(
-  gl: WebGL2RenderingContext,
-  type: GLenum,
-  source: string,
-): WebGLShader {
+function createShader(gl: WebGL2RenderingContext, type: GLenum, source: string): WebGLShader {
   const shader = gl.createShader(type);
   if (!shader) {
     throw new Error('Shader cant be created');
@@ -45,17 +46,9 @@ function createShaderProgram(
   vertexShaderInfo: VertexShaderInfo,
   fragmentShaderInfo: FragmentShaderInfo,
 ): ShaderProgram {
-  const vertexShader = createShader(
-    gl,
-    gl.VERTEX_SHADER,
-    vertexShaderInfo.source,
-  );
+  const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderInfo.source);
 
-  const fragmentShader = createShader(
-    gl,
-    gl.FRAGMENT_SHADER,
-    fragmentShaderInfo.source,
-  );
+  const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderInfo.source);
 
   const program = gl.createProgram();
 
@@ -77,10 +70,7 @@ function createShaderProgram(
   const attributes: Record<string, number> = {};
   const uniforms: Record<string, WebGLUniformLocation | null> = {};
 
-  const allUniforms = uniq([
-    ...vertexShaderInfo.uniforms,
-    ...fragmentShaderInfo.uniforms,
-  ]);
+  const allUniforms = uniq([...vertexShaderInfo.uniforms, ...fragmentShaderInfo.uniforms]);
 
   for (const attributeName of vertexShaderInfo.attributes) {
     const location = gl.getAttribLocation(program, attributeName);
@@ -127,6 +117,9 @@ function createShaderProgram(
     locations: {
       getUniform,
       getAttribute,
+    },
+    setUniformInt: (uniformName, value) => {
+      gl.uniform1i(getUniform(uniformName), value);
     },
     setUniformUInt: (uniformName, value) => {
       gl.uniform1ui(getUniform(uniformName), value);
@@ -187,7 +180,7 @@ export function createBuffers(
   };
 }
 
-function createSimpleBuffers(
+function createModelBuffers(
   gl: WebGL2RenderingContext,
   modelData: SimpleMesh,
 ): {positionBuffer: WebGLBuffer; model: SimpleModelRenderInfo} {
@@ -209,19 +202,21 @@ function createSimpleBuffers(
   };
 }
 
-function createLineBuffer(
-  gl: WebGL2RenderingContext,
-  data: BufferSource,
-): WebGLBuffer {
-  const positionBuffer = gl.createBuffer();
-  if (!positionBuffer) {
+function createArrayBuffer(gl: WebGL2RenderingContext): WebGLBuffer {
+  const arrayBuffer = gl.createBuffer();
+  if (!arrayBuffer) {
     throw new Error('Cant create buffer');
   }
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
 
-  return positionBuffer;
+  return arrayBuffer;
+}
+
+function createStaticArrayBuffer(gl: WebGL2RenderingContext, data: BufferSource): WebGLBuffer {
+  const arrayBuffer = createArrayBuffer(gl);
+  gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+  return arrayBuffer;
 }
 
 function createTexture(
@@ -242,31 +237,62 @@ function createTexture(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
   if (smooth) {
-    gl.texParameteri(
-      gl.TEXTURE_2D,
-      gl.TEXTURE_MIN_FILTER,
-      gl.LINEAR_MIPMAP_LINEAR,
-    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   } else {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   }
 
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGBA,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    textureImage,
-  );
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImage);
 
   if (smooth) {
     gl.generateMipmap(gl.TEXTURE_2D);
   }
 
   return texture;
+}
+
+function createEmptyTexture(
+  gl: WebGL2RenderingContext,
+  {width, height}: {width: number; height: number},
+  textureUnitIndex: number,
+): WebGLTexture {
+  gl.activeTexture(gl.TEXTURE0 + textureUnitIndex);
+
+  const targetTexture = gl.createTexture();
+  if (!targetTexture) {
+    throw new Error('Cant create texture');
+  }
+
+  gl.bindTexture(gl.TEXTURE_2D, targetTexture);
+
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+  // TODO: HOW TO ADD MIPMAP?
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+  return targetTexture;
+}
+
+function createFrameBuffer(
+  gl: WebGL2RenderingContext,
+  targetTexture: WebGLTexture,
+): WebGLFramebuffer {
+  const frameBuffer = gl.createFramebuffer();
+  if (!frameBuffer) {
+    throw new Error('Cant create Framebuffer');
+  }
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, targetTexture, 0);
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+  return frameBuffer;
 }
 
 type AttributesInfo = {
@@ -283,7 +309,7 @@ export function createVao(
     position: AttributesInfo;
     uv?: AttributesInfo;
   },
-): WebGLVertexArrayObject {
+): VaoObject {
   const vao = gl.createVertexArray();
   if (!vao) {
     throw new Error('Cant create VAO');
@@ -303,13 +329,14 @@ export function createVao(
 
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-  return vao;
+  return {
+    vao,
+    positionBuffer: position.buffer,
+    uvBuffer: uv?.buffer,
+  };
 }
 
-export function initialize(
-  gl: WebGL2RenderingContext,
-  {models, textures}: Assets,
-): Scene {
+export function initialize(gl: WebGL2RenderingContext, {models, textures}: Assets): Scene {
   const shaderProgram = createShaderProgram(
     gl,
     matrixVertexShaderInfo,
@@ -328,15 +355,66 @@ export function initialize(
     equatorFragmentShaderInfo,
   );
 
-  const objects: SceneObject[] = [];
-
-  const {indexBuffer, positionBuffer, uvBuffer, model} = createBuffers(
+  const countriesShaderProgram = createShaderProgram(
     gl,
-    models.earth,
+    simpleVertexShaderInfo,
+    textureFragmentShaderInfo,
   );
 
-  const earthTexture = createTexture(gl, textures.earth, 0, true);
+  const countriesRedShaderProgram = createShaderProgram(
+    gl,
+    simpleVertexShaderInfo,
+    texture2FragmentShaderInfo,
+  );
+
+  const objects: SceneObject[] = [];
+  const frameBufferObjects: SceneObject[] = [];
+
+  const {indexBuffer, positionBuffer, uvBuffer, model} = createBuffers(gl, models.earth);
+
+  // const earthTexture = createTexture(gl, textures.earth, 0, true);
   const countriesTexture = createTexture(gl, textures.countries, 1);
+  const countriesAtlasTexture = createTexture(gl, textures.countriesAtlas, 2);
+  const countriesTexture2 = createEmptyTexture(gl, TEXTURE_SIZE, 0);
+  const countriesTexture3 = createEmptyTexture(gl, TEXTURE_SIZE, 3);
+  (window as any).t2 = countriesTexture2;
+  (window as any).t3 = countriesTexture3;
+
+  const countriesFrameBuffer = createFrameBuffer(gl, countriesTexture2);
+
+  gl.useProgram(countriesShaderProgram.program);
+  countriesShaderProgram.setUniformInt('u_texture', 2);
+  countriesShaderProgram.setUniformInt('u_texture2', 3);
+
+  gl.useProgram(countriesRedShaderProgram.program);
+  countriesRedShaderProgram.setUniformInt('u_texture', 2);
+  countriesRedShaderProgram.setUniformInt('u_texture2', 3);
+
+  const trianglePositionBuffer = createArrayBuffer(gl);
+  const triangleUvBuffer = createArrayBuffer(gl);
+
+  const triangleVao = createVao(gl, {
+    position: {
+      location: countriesShaderProgram.locations.getAttribute('a_position'),
+      buffer: trianglePositionBuffer,
+    },
+    uv: {
+      location: countriesShaderProgram.locations.getAttribute('a_texcoord'),
+      buffer: triangleUvBuffer,
+    },
+  });
+
+  frameBufferObjects.push({
+    id: 'triangle',
+    objectType: ObjectType.COUNTRIES,
+    vao: triangleVao,
+    cullFace: CullFace.OFF,
+    disableDepthTest: true,
+    renderType: RenderType.DRAW_ARRAYS,
+    renderMode: RenderMode.TRIANGLES,
+    elementsCount: 0,
+    hidden: true,
+  });
 
   gl.useProgram(shaderProgram.program);
 
@@ -362,15 +440,12 @@ export function initialize(
     ...model,
     id: 'earth',
     matrix: earthMatrix,
-    shaderProgram,
+    objectType: ObjectType.EARTH,
     vao,
     cullFace: CullFace.FRONT,
   });
 
-  const lineBuffer = createLineBuffer(
-    gl,
-    new Float32Array([10, 0, 0, -10, 0, 0]),
-  );
+  const lineBuffer = createStaticArrayBuffer(gl, new Float32Array([10, 0, 0, -10, 0, 0]));
 
   const linesVao = createVao(gl, {
     position: {
@@ -380,16 +455,16 @@ export function initialize(
   });
 
   objects.push({
-    shaderProgram: lineShaderProgram,
     vao: linesVao,
     id: 'pointerLine',
+    objectType: ObjectType.LINE,
     renderType: RenderType.DRAW_ARRAYS,
     renderMode: RenderMode.LINES,
     elementsCount: 2,
     disableDepthTest: true,
   });
 
-  const circleBuffers = createSimpleBuffers(gl, models.circle);
+  const circleBuffers = createModelBuffers(gl, models.circle);
 
   const circleVao = createVao(gl, {
     position: {
@@ -401,9 +476,9 @@ export function initialize(
   // Meridians
   for (let i = 0; i < 4; i++) {
     objects.push({
-      shaderProgram: circleShaderProgram,
-      vao: circleVao,
       id: 'meridian',
+      objectType: ObjectType.CIRCLE,
+      vao: circleVao,
       disableDepthTest: true,
       matrix: mat4.fromRotation(mat4.create(), 0.25 * i * Math.PI, [0, 1, 0]),
       ...circleBuffers.model,
@@ -412,10 +487,10 @@ export function initialize(
 
   // Equator
   objects.push({
-    shaderProgram: circleShaderProgram,
+    id: 'equator',
+    objectType: ObjectType.CIRCLE,
     vao: circleVao,
     disableDepthTest: true,
-    id: 'equator',
     matrix: mat4.fromRotation(mat4.create(), Math.PI / 2, [1, 0, 0]),
     ...circleBuffers.model,
   });
@@ -423,12 +498,21 @@ export function initialize(
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clearColor(0, 0, 0, 0);
 
-  gl.enable(gl.CULL_FACE);
+  // gl.enable(gl.CULL_FACE);
   // gl.cullFace(gl.FRONT);
-  gl.enable(gl.DEPTH_TEST);
+  // gl.enable(gl.DEPTH_TEST);
 
   return {
     lineBuffer,
     objects,
+    shaders: {
+      main: shaderProgram,
+      line: lineShaderProgram,
+      countries: countriesShaderProgram,
+      countriesRed: countriesRedShaderProgram,
+      circle: circleShaderProgram,
+    },
+    frameBufferObjects,
+    countriesFrameBuffer,
   };
 }
