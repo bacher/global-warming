@@ -2,7 +2,7 @@ import type {mat4, vec2, vec3, vec4} from 'gl-matrix';
 
 import type {Country} from '../data/countries';
 import {CountryInfo} from '../data/countries';
-import {RenderType} from './modelTypes';
+import {BlendMode, RenderType} from './modelTypes';
 
 export type Point2d = [number, number];
 
@@ -62,7 +62,9 @@ export type CommonSceneObjectType = {
   matrix?: mat4;
   cullFace?: CullFace;
   disableDepthTest?: boolean;
+  blendMode?: BlendMode;
   hidden?: boolean;
+  updateBuffers?: (positionData: number[], uvData: number[]) => void;
 };
 
 export type ModelRenderInfo = {
@@ -88,7 +90,6 @@ export type Shaders = {
   main: ShaderProgram;
   line: ShaderProgram;
   countries: ShaderProgram;
-  countriesRed: ShaderProgram;
   circle: ShaderProgram;
 };
 

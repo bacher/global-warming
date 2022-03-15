@@ -8,8 +8,14 @@ import type {
   VaoObject,
   VertexShaderInfo,
 } from './types';
-import {CullFace, ModelRenderInfo, ObjectType, SimpleModelRenderInfo} from './types';
-import {ModelData, RenderMode, RenderType, SimpleMesh} from './modelTypes';
+import {
+  CullFace,
+  DrawArraysObject,
+  ModelRenderInfo,
+  ObjectType,
+  SimpleModelRenderInfo,
+} from './types';
+import {BlendMode, ModelData, RenderMode, RenderType, SimpleMesh} from './modelTypes';
 import {matrixVertexShaderInfo} from '../shaders/matrix.vertex';
 import {textureMixFragmentShaderInfo} from '../shaders/textureMix.fragment';
 import {simpleFragmentShaderInfo} from '../shaders/simple.fragment';
@@ -20,7 +26,6 @@ import {mat4} from 'gl-matrix';
 import {TEXTURE_SIZE} from '../data/textures';
 import {simpleVertexShaderInfo} from '../shaders/simple.vertex';
 import {textureFragmentShaderInfo} from '../shaders/texture.fragment';
-import {texture2FragmentShaderInfo} from '../shaders/texture2.fragment';
 
 function createShader(gl: WebGL2RenderingContext, type: GLenum, source: string): WebGLShader {
   const shader = gl.createShader(type);
@@ -361,12 +366,6 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
     textureFragmentShaderInfo,
   );
 
-  const countriesRedShaderProgram = createShaderProgram(
-    gl,
-    simpleVertexShaderInfo,
-    texture2FragmentShaderInfo,
-  );
-
   const objects: SceneObject[] = [];
   const frameBufferObjects: SceneObject[] = [];
 
@@ -376,19 +375,11 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
   const countriesTexture = createTexture(gl, textures.countries, 1);
   const countriesAtlasTexture = createTexture(gl, textures.countriesAtlas, 2);
   const countriesTexture2 = createEmptyTexture(gl, TEXTURE_SIZE, 0);
-  const countriesTexture3 = createEmptyTexture(gl, TEXTURE_SIZE, 3);
-  (window as any).t2 = countriesTexture2;
-  (window as any).t3 = countriesTexture3;
 
   const countriesFrameBuffer = createFrameBuffer(gl, countriesTexture2);
 
   gl.useProgram(countriesShaderProgram.program);
   countriesShaderProgram.setUniformInt('u_texture', 2);
-  countriesShaderProgram.setUniformInt('u_texture2', 3);
-
-  gl.useProgram(countriesRedShaderProgram.program);
-  countriesRedShaderProgram.setUniformInt('u_texture', 2);
-  countriesRedShaderProgram.setUniformInt('u_texture2', 3);
 
   const trianglePositionBuffer = createArrayBuffer(gl);
   const triangleUvBuffer = createArrayBuffer(gl);
@@ -404,7 +395,7 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
     },
   });
 
-  frameBufferObjects.push({
+  const countriesObject: DrawArraysObject = {
     id: 'triangle',
     objectType: ObjectType.COUNTRIES,
     vao: triangleVao,
@@ -412,9 +403,20 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
     disableDepthTest: true,
     renderType: RenderType.DRAW_ARRAYS,
     renderMode: RenderMode.TRIANGLES,
+    blendMode: BlendMode.MIX,
     elementsCount: 0,
     hidden: true,
-  });
+    updateBuffers: (positionData: number[], uvData: number[]) => {
+      gl.bindBuffer(gl.ARRAY_BUFFER, trianglePositionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positionData), gl.DYNAMIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, triangleUvBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvData), gl.DYNAMIC_DRAW);
+
+      countriesObject.elementsCount = positionData.length / 3;
+    },
+  };
+
+  frameBufferObjects.push(countriesObject);
 
   gl.useProgram(shaderProgram.program);
 
@@ -509,7 +511,6 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
       main: shaderProgram,
       line: lineShaderProgram,
       countries: countriesShaderProgram,
-      countriesRed: countriesRedShaderProgram,
       circle: circleShaderProgram,
     },
     frameBufferObjects,

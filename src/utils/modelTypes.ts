@@ -18,6 +18,11 @@ export enum RenderMode {
   TRIANGLE_STRIP = 0x0005,
 }
 
+export const enum BlendMode {
+  OFF = 1,
+  MIX,
+}
+
 export type SimpleMesh = {
   renderType: RenderType.DRAW_ARRAYS;
   renderMode: RenderMode;

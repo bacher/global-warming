@@ -41,7 +41,7 @@ export async function loadAssets(): Promise<Assets> {
     loadTexture(`${process.env.PUBLIC_URL}/textures/earth_compress.png`),
     loadTexture(`${process.env.PUBLIC_URL}/textures/earth_countries.png`),
     loadTexture(`${process.env.PUBLIC_URL}/textures/earth_area.png`),
-    loadTexture(`${process.env.PUBLIC_URL}/textures/countries.png`),
+    loadTexture(`${process.env.PUBLIC_URL}/textures/countries_atlas.png`),
   ]);
 
   return {

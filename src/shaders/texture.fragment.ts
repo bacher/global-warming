@@ -8,27 +8,15 @@ export const textureFragmentShaderInfo: FragmentShaderInfo = {
 precision highp float;
 
 uniform sampler2D u_texture;
-uniform sampler2D u_texture2;
 
 in vec2 v_texcoord;
-in vec2 v_texcoord2;
 
 out vec4 outColor;
 
 void main() {
   vec4 color = texture(u_texture, v_texcoord);
-  vec4 colorB = texture(u_texture2, v_texcoord2);
- 
-  if (color[0] == 0.0) {
-    // outColor = colorB;
-    // outColor = vec4(0.3,0.3,0.0,1.0);
-    discard;
-  }
-
-  // outColor = vec4(mix(outColor.rgb, color.rgb, color.r), 1);
-  // outColor = colorB;
-  outColor = color;
+  outColor = vec4(color.r, 0, 0, color.r);
 }
 `,
-  uniforms: ['u_texture', 'u_texture2'],
+  uniforms: ['u_texture'],
 };
