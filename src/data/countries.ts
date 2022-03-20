@@ -1,3 +1,5 @@
+import atlas from './atlas.json';
+
 export enum Country {
   ITALY = 1,
   FRANCE,
@@ -39,8 +41,19 @@ type CountryDetails = {
   tags: Tag[];
 };
 
+type AtlasEntry = {
+  color: number;
+  srcX: number;
+  srcY: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export type CountryInfo = CountryDetails & {
   id: Country;
+  atlasData: AtlasEntry;
 };
 
 type Countries = Map<Country, CountryInfo>;
@@ -249,16 +262,20 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
 ]);
 
 // @ts-ignore
-export const countries = [...countriesInitial.entries()].reduce<Countries>(
-  (acc, [id, info]) => {
-    acc.set(id, {
-      id,
-      ...info,
-    });
-    return acc;
-  },
-  new Map(),
-);
+export const countries = [...countriesInitial.entries()].reduce<Countries>((acc, [id, info]) => {
+  const atlasData = atlas.find((atlasEntry) => atlasEntry.color === info.color);
+
+  if (!atlasData) {
+    throw new Error('No country atlas data');
+  }
+
+  acc.set(id, {
+    id,
+    ...info,
+    atlasData,
+  });
+  return acc;
+}, new Map());
 
 export const countriesByColor: Map<number, Country> = new Map(
   // @ts-ignore
@@ -268,9 +285,7 @@ export const countriesByColor: Map<number, Country> = new Map(
   ]),
 );
 
-export function getRandomCountryExcept(
-  ignoreCountries: Country[],
-): CountryInfo | undefined {
+export function getRandomCountryExcept(ignoreCountries: Country[]): CountryInfo | undefined {
   // @ts-ignore
   let list = [...countries.values()];
 

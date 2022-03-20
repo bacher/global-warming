@@ -1,11 +1,10 @@
 import {mat4} from 'gl-matrix';
 
-import {countries, mapCountriesToColor} from '../data/countries';
 import {ATLAS_SIZE, TEXTURE_SIZE} from '../data/textures';
-import atlas from '../data/atlas.json';
 import type {GameState, Scene, ShaderProgram, Shaders} from './types';
 import {CullFace, GameType, ObjectType, ViewportSize} from './types';
 import {BlendMode, RenderType} from './modelTypes';
+import {countries} from '../data/countries';
 
 export type DrawParams = {
   width: number;
@@ -43,7 +42,7 @@ const current: {
   failedCountries: unknown | undefined;
   isBlendModeEnabled: boolean;
   blendMode: BlendMode;
-  countriesTextureState: string;
+  countriesTextureState: unknown;
 } = {
   frameBuffer: undefined,
   viewport: {width: 0, height: 0},
@@ -56,7 +55,7 @@ const current: {
   failedCountries: undefined,
   isBlendModeEnabled: false,
   blendMode: BlendMode.OFF,
-  countriesTextureState: '',
+  countriesTextureState: undefined,
 };
 
 function chooseShader(shaders: Shaders, objectType: ObjectType) {
@@ -70,10 +69,6 @@ function chooseShader(shaders: Shaders, objectType: ObjectType) {
     case ObjectType.COUNTRIES:
       return shaders.countries;
   }
-}
-
-function getCountriesTextureState(colors: number[]): string {
-  return [...colors].sort().join(';');
 }
 
 export function draw(
@@ -172,9 +167,7 @@ export function draw(
 
   // Render country texture
 
-  const countriesTextureState = getCountriesTextureState([atlas[1].color]);
-
-  if (countriesTextureState !== current.countriesTextureState || true) {
+  if (gameState.countriesState !== current.countriesTextureState) {
     setFramebuffer(scene.countriesFrameBuffer);
     setViewport(TEXTURE_SIZE.width, TEXTURE_SIZE.height);
     // setViewport(gl.canvas.width, gl.canvas.height);
@@ -186,17 +179,20 @@ export function draw(
       if (obj.id === 'triangle') {
         const posData = [];
         const uvData = [];
+        const colorData = [];
 
-        for (const country of atlas) {
-          const x0 = (country.srcX / TEXTURE_SIZE.width) * 2 - 1;
-          const y0 = (country.srcY / TEXTURE_SIZE.height) * 2 - 1;
-          const x1 = x0 + (country.width / TEXTURE_SIZE.width) * 2;
-          const y1 = y0 + (country.height / TEXTURE_SIZE.height) * 2;
+        for (const {countryId, color} of gameState.countriesState) {
+          const {atlasData} = countries.get(countryId)!;
 
-          const ux0 = country.x / ATLAS_SIZE.width;
-          const uy0 = country.y / ATLAS_SIZE.height;
-          const ux1 = ux0 + country.width / ATLAS_SIZE.width;
-          const uy1 = uy0 + country.height / ATLAS_SIZE.height;
+          const x0 = (atlasData.srcX / TEXTURE_SIZE.width) * 2 - 1;
+          const y0 = (atlasData.srcY / TEXTURE_SIZE.height) * 2 - 1;
+          const x1 = x0 + (atlasData.width / TEXTURE_SIZE.width) * 2;
+          const y1 = y0 + (atlasData.height / TEXTURE_SIZE.height) * 2;
+
+          const ux0 = atlasData.x / ATLAS_SIZE.width;
+          const uy0 = atlasData.y / ATLAS_SIZE.height;
+          const ux1 = ux0 + atlasData.width / ATLAS_SIZE.width;
+          const uy1 = uy0 + atlasData.height / ATLAS_SIZE.height;
 
           const p1 = [x0, y0, 0];
           const p2 = [x1, y0, 0];
@@ -210,9 +206,10 @@ export function draw(
 
           posData.push(...[...p1, ...p2, ...p3, ...p2, ...p3, ...p4]);
           uvData.push(...[...u1, ...u2, ...u3, ...u2, ...u3, ...u4]);
+          colorData.push(...[...color, ...color, ...color, ...color, ...color, ...color]);
         }
 
-        obj.updateBuffers!(posData, uvData);
+        obj.updateBuffers!(posData, uvData, colorData);
         obj.hidden = false;
       }
 
@@ -236,7 +233,7 @@ export function draw(
       }
     }
 
-    current.countriesTextureState = countriesTextureState;
+    current.countriesTextureState = gameState.countriesState;
   }
 
   setFramebuffer(undefined);
@@ -302,34 +299,34 @@ export function draw(
 
     switch (obj.renderType) {
       case RenderType.DRAW_ELEMENTS: {
-        const selectedCountryId =
-          gameState.type === GameType.GAME ||
-          gameState.type === GameType.QUIZ ||
-          gameState.type === GameType.DISCOVERY
-            ? gameState.selectedCountry
-            : undefined;
-
-        const selectedCountry = selectedCountryId ? countries.get(selectedCountryId) : undefined;
-
-        shader.setUniformUInt('u_selected', selectedCountry?.color ?? 0);
-
-        if (gameState.type === GameType.GAME) {
-          if (current.successCountries !== gameState.successCountries) {
-            current.successCountries = gameState.successCountries;
-
-            const uSuccess = new Uint32Array(200);
-            uSuccess.set(mapCountriesToColor(gameState.successCountries));
-            shader.setUniformUIntArray('u_success', uSuccess);
-          }
-
-          if (current.failedCountries !== gameState.failedCountries) {
-            current.failedCountries = gameState.failedCountries;
-
-            const uFailed = new Uint32Array(10);
-            uFailed.set(mapCountriesToColor(gameState.failedCountries));
-            shader.setUniformUIntArray('u_failed', uFailed);
-          }
-        }
+        // const selectedCountryId =
+        //   gameState.type === GameType.GAME ||
+        //   gameState.type === GameType.QUIZ ||
+        //   gameState.type === GameType.DISCOVERY
+        //     ? gameState.selectedCountry
+        //     : undefined;
+        //
+        // const selectedCountry = selectedCountryId ? countries.get(selectedCountryId) : undefined;
+        //
+        // shader.setUniformUInt('u_selected', selectedCountry?.color ?? 0);
+        //
+        // if (gameState.type === GameType.GAME) {
+        //   if (current.successCountries !== gameState.successCountries) {
+        //     current.successCountries = gameState.successCountries;
+        //
+        //     const uSuccess = new Uint32Array(200);
+        //     uSuccess.set(mapCountriesToColor(gameState.successCountries));
+        //     shader.setUniformUIntArray('u_success', uSuccess);
+        //   }
+        //
+        //   if (current.failedCountries !== gameState.failedCountries) {
+        //     current.failedCountries = gameState.failedCountries;
+        //
+        //     const uFailed = new Uint32Array(10);
+        //     uFailed.set(mapCountriesToColor(gameState.failedCountries));
+        //     shader.setUniformUIntArray('u_failed', uFailed);
+        //   }
+        // }
 
         gl.drawElements(obj.renderMode, obj.elementsCount, obj.indexType, 0);
         break;

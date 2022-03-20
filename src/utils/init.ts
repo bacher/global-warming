@@ -26,6 +26,8 @@ import {mat4} from 'gl-matrix';
 import {TEXTURE_SIZE} from '../data/textures';
 import {simpleVertexShaderInfo} from '../shaders/simple.vertex';
 import {textureFragmentShaderInfo} from '../shaders/texture.fragment';
+import {countriesVertexShaderInfo} from '../shaders/countries.vertex';
+import {countriesFragmentShaderInfo} from '../shaders/countries.fragment';
 
 function createShader(gl: WebGL2RenderingContext, type: GLenum, source: string): WebGLShader {
   const shader = gl.createShader(type);
@@ -308,16 +310,16 @@ function createFrameBuffer(
 type AttributesInfo = {
   location: number;
   buffer: WebGLBuffer;
+  iterationSize: number;
+  normalized?: boolean;
 };
 
 export function createVao(
   gl: WebGL2RenderingContext,
   {
-    position,
-    uv,
+    attributes,
   }: {
-    position: AttributesInfo;
-    uv?: AttributesInfo;
+    attributes: AttributesInfo[];
   },
 ): VaoObject {
   const vao = gl.createVertexArray();
@@ -327,22 +329,16 @@ export function createVao(
 
   gl.bindVertexArray(vao);
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, position.buffer);
-  gl.enableVertexAttribArray(position.location);
-  gl.vertexAttribPointer(position.location, 3, gl.FLOAT, false, 0, 0);
-
-  if (uv) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, uv.buffer);
-    gl.enableVertexAttribArray(uv.location);
-    gl.vertexAttribPointer(uv.location, 2, gl.FLOAT, true, 0, 0);
+  for (const {location, buffer, iterationSize, normalized} of attributes) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.enableVertexAttribArray(location);
+    gl.vertexAttribPointer(location, iterationSize, gl.FLOAT, Boolean(normalized), 0, 0);
   }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
   return {
     vao,
-    positionBuffer: position.buffer,
-    uvBuffer: uv?.buffer,
   };
 }
 
@@ -367,8 +363,8 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
 
   const countriesShaderProgram = createShaderProgram(
     gl,
-    simpleVertexShaderInfo,
-    textureFragmentShaderInfo,
+    countriesVertexShaderInfo,
+    countriesFragmentShaderInfo,
   );
 
   const objects: SceneObject[] = [];
@@ -388,16 +384,28 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
 
   const trianglePositionBuffer = createArrayBuffer(gl);
   const triangleUvBuffer = createArrayBuffer(gl);
+  const triangleColorBuffer = createArrayBuffer(gl);
 
   const triangleVao = createVao(gl, {
-    position: {
-      location: countriesShaderProgram.locations.getAttribute('a_position'),
-      buffer: trianglePositionBuffer,
-    },
-    uv: {
-      location: countriesShaderProgram.locations.getAttribute('a_texcoord'),
-      buffer: triangleUvBuffer,
-    },
+    attributes: [
+      {
+        location: countriesShaderProgram.locations.getAttribute('a_position'),
+        buffer: trianglePositionBuffer,
+        iterationSize: 3,
+      },
+      {
+        location: countriesShaderProgram.locations.getAttribute('a_texcoord'),
+        buffer: triangleUvBuffer,
+        iterationSize: 2,
+        normalized: true,
+      },
+      {
+        location: countriesShaderProgram.locations.getAttribute('a_color'),
+        buffer: triangleColorBuffer,
+        iterationSize: 4,
+        // normalized: true,
+      },
+    ],
   });
 
   const countriesObject: DrawArraysObject = {
@@ -411,11 +419,13 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
     blendMode: BlendMode.MIX,
     elementsCount: 0,
     hidden: true,
-    updateBuffers: (positionData: number[], uvData: number[]) => {
+    updateBuffers: (positionData: number[], uvData: number[], colorData: number[]) => {
       gl.bindBuffer(gl.ARRAY_BUFFER, trianglePositionBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positionData), gl.DYNAMIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, triangleUvBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvData), gl.DYNAMIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, triangleColorBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorData), gl.DYNAMIC_DRAW);
 
       countriesObject.elementsCount = positionData.length / 3;
     },
@@ -426,14 +436,19 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
   gl.useProgram(shaderProgram.program);
 
   const vao = createVao(gl, {
-    position: {
-      location: shaderProgram.locations.getAttribute('a_position'),
-      buffer: positionBuffer,
-    },
-    uv: {
-      location: shaderProgram.locations.getAttribute('a_texcoord'),
-      buffer: uvBuffer,
-    },
+    attributes: [
+      {
+        location: shaderProgram.locations.getAttribute('a_position'),
+        buffer: positionBuffer,
+        iterationSize: 3,
+      },
+      {
+        location: shaderProgram.locations.getAttribute('a_texcoord'),
+        buffer: uvBuffer,
+        iterationSize: 2,
+        normalized: true,
+      },
+    ],
   });
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
   gl.uniform1i(shaderProgram.locations.getUniform('u_texture'), 0);
@@ -455,10 +470,13 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
   const lineBuffer = createStaticArrayBuffer(gl, new Float32Array([10, 0, 0, -10, 0, 0]));
 
   const linesVao = createVao(gl, {
-    position: {
-      location: lineShaderProgram.locations.getAttribute('a_position'),
-      buffer: lineBuffer,
-    },
+    attributes: [
+      {
+        location: lineShaderProgram.locations.getAttribute('a_position'),
+        buffer: lineBuffer,
+        iterationSize: 3,
+      },
+    ],
   });
 
   objects.push({
@@ -474,10 +492,13 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
   const circleBuffers = createModelBuffers(gl, models.circle);
 
   const circleVao = createVao(gl, {
-    position: {
-      location: circleShaderProgram.locations.getAttribute('a_position'),
-      buffer: circleBuffers.positionBuffer,
-    },
+    attributes: [
+      {
+        location: circleShaderProgram.locations.getAttribute('a_position'),
+        buffer: circleBuffers.positionBuffer,
+        iterationSize: 3,
+      },
+    ],
   });
 
   // Meridians

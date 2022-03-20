@@ -1,4 +1,4 @@
-import {mat4, vec3} from 'gl-matrix';
+import {mat4} from 'gl-matrix';
 import {useEffect, useMemo, useRef, useState} from 'react';
 
 import {countries, Country, getRandomCountryExcept} from '../../data/countries';
@@ -21,6 +21,7 @@ import {createIntroAnimation, IntroAnimation} from '../../utils/animations';
 import {StartMenu} from '../StartMenu';
 import {CountriesCanvas} from '../CountriesCanvas';
 import styles from './Game.module.scss';
+import {getCountryStates} from '../../utils/countryState';
 
 const SPIN_SPEED = 0.16;
 const ROLL_SPEED = 0.14;
@@ -43,6 +44,12 @@ Spin: ${formatNumber(directionState.direction.spin)}rad
 Distance: ${formatNumber(directionState.distance, 0)}`;
   }
 }
+
+type InnerGameState = {
+  selectedCountryId: Country | undefined;
+  successCountryIds: Country[];
+  failedCountryIds: Country[];
+};
 
 export function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -68,10 +75,18 @@ export function Game() {
   const currentViewportSizeRef = useRef({width: 0, height: 0});
   const rerender = useRerender();
   const introAnimation = useRef<IntroAnimation | undefined>();
-  const gameStateRef = useRef<GameState>({type: GameType.MENU});
+  const gameStateRef = useRef<GameState>({type: GameType.MENU, countriesState: []});
   const lastDrawParamsRef = useRef<DrawParams | undefined>();
   const lastEarthMatrixRef = useRef<mat4 | undefined>();
   const getSelectedCountryMemorized = useMemo(makeMemorizedGetSelectedCountry, []);
+
+  const innerGameStateRef = useRef<InnerGameState>({
+    selectedCountryId: undefined,
+    successCountryIds: [],
+    failedCountryIds: [],
+  });
+
+  const lastProcessedInnerGameStateRef = useRef<InnerGameState | undefined>();
 
   const {splash, showSplashText, showBlockText} = useSplash();
 
@@ -248,6 +263,17 @@ export function Game() {
 
       const viewportSize = updateCanvasSize();
 
+      if (lastProcessedInnerGameStateRef.current !== innerGameStateRef.current) {
+        gameStateRef.current = {
+          ...gameStateRef.current,
+          countriesState: getCountryStates(innerGameStateRef.current),
+        };
+
+        console.log('CountriesState =', gameStateRef.current.countriesState);
+
+        lastProcessedInnerGameStateRef.current = innerGameStateRef.current;
+      }
+
       const drawParams = {
         width: viewportSize.width,
         height: viewportSize.height,
@@ -265,26 +291,27 @@ export function Game() {
       }
 
       const gameState = gameStateRef.current;
+      const innerGameState = innerGameStateRef.current;
 
       if (
         (gameState.type === GameType.GAME && gameState.guessCountry) ||
         (gameState.type === GameType.QUIZ && gameState.guessCountry) ||
         gameState.type === GameType.DISCOVERY
       ) {
-        let selectedCountry: Country | undefined;
+        let selectedCountryId: Country | undefined;
 
         if (mousePosRef.current) {
-          selectedCountry = getSelectedCountryMemorized({
+          selectedCountryId = getSelectedCountryMemorized({
             matrix: lastEarthMatrixRef.current!,
             modelData: assets!.models.earth,
             cursor: mousePosRef.current,
           });
         }
 
-        if (gameState.selectedCountry !== selectedCountry) {
-          gameStateRef.current = {
-            ...gameState,
-            selectedCountry,
+        if (innerGameState.selectedCountryId !== selectedCountryId) {
+          innerGameStateRef.current = {
+            ...innerGameState,
+            selectedCountryId,
           };
         }
       }
@@ -352,9 +379,7 @@ export function Game() {
     gameStateRef.current = {
       type: GameType.GAME,
       guessCountry: country,
-      selectedCountry: undefined,
-      successCountries: [],
-      failedCountries: [],
+      countriesState: [],
     };
 
     rerender();
@@ -372,7 +397,13 @@ export function Game() {
     gameStateRef.current = {
       type: GameType.QUIZ,
       guessCountry: country,
-      selectedCountry: undefined,
+      countriesState: [],
+    };
+
+    innerGameStateRef.current = {
+      selectedCountryId: undefined,
+      successCountryIds: [],
+      failedCountryIds: [],
     };
 
     rerender();
@@ -381,7 +412,12 @@ export function Game() {
   const onDiscoverClick = useHandler(() => {
     gameStateRef.current = {
       type: GameType.DISCOVERY,
-      selectedCountry: undefined,
+      countriesState: [],
+    };
+    innerGameStateRef.current = {
+      selectedCountryId: undefined,
+      successCountryIds: [],
+      failedCountryIds: [],
     };
     rerender();
   });
@@ -405,12 +441,17 @@ export function Game() {
       gameStateRef.current = {
         ...gameState,
         guessCountry: undefined,
-        selectedCountry: undefined,
+      };
+
+      innerGameStateRef.current = {
+        ...innerGameStateRef.current,
+        selectedCountryId: undefined,
       };
 
       showBlockText('You guessed all countries!', {}, () => {
         gameStateRef.current = {
           type: GameType.MENU,
+          countriesState: gameStateRef.current.countriesState,
         };
         rerender();
       });
@@ -425,26 +466,34 @@ export function Game() {
     }
 
     const gameState = gameStateRef.current;
+    const innerGameState = innerGameStateRef.current;
+    const selectedCountryId = innerGameState.selectedCountryId;
 
     switch (gameState.type) {
       case GameType.GAME:
-        if (gameState.guessCountry && gameState.selectedCountry) {
-          if (gameState.guessCountry.id === gameState.selectedCountry) {
-            gameStateRef.current = {
-              ...gameState,
-              successCountries: [...gameState.successCountries, gameState.guessCountry.id],
+        if (gameState.guessCountry && selectedCountryId) {
+          if (gameState.guessCountry.id === selectedCountryId) {
+            innerGameStateRef.current = {
+              ...innerGameStateRef.current,
+              successCountryIds: [
+                ...innerGameStateRef.current.successCountryIds,
+                gameState.guessCountry.id,
+              ],
             };
 
             showSplashText('You are right!');
             alreadyGuessedCountriesRef.current.push(gameState.guessCountry.id);
             chooseNextCountry();
-          } else if (!gameState.successCountries.includes(gameState.selectedCountry)) {
-            gameStateRef.current = {
-              ...gameState,
-              failedCountries: [...gameState.failedCountries, gameState.guessCountry.id],
+          } else if (!innerGameState.successCountryIds.includes(selectedCountryId)) {
+            innerGameStateRef.current = {
+              ...innerGameStateRef.current,
+              failedCountryIds: [
+                ...innerGameStateRef.current.failedCountryIds,
+                gameState.guessCountry.id,
+              ],
             };
 
-            if (gameStateRef.current.failedCountries.length < WARMING_TRIES_COUNT) {
+            if (innerGameStateRef.current.failedCountryIds.length < WARMING_TRIES_COUNT) {
               showSplashText(
                 <p>
                   You get wrong
@@ -459,7 +508,11 @@ export function Game() {
               alreadyGuessedCountriesRef.current.push(gameState.guessCountry.id);
               chooseNextCountry();
             } else {
-              gameState.selectedCountry = undefined;
+              innerGameStateRef.current = {
+                ...innerGameStateRef.current,
+                selectedCountryId: undefined,
+              };
+
               gameState.guessCountry = undefined;
 
               showBlockText(
@@ -475,6 +528,7 @@ export function Game() {
                 () => {
                   gameStateRef.current = {
                     type: GameType.MENU,
+                    countriesState: gameStateRef.current.countriesState,
                   };
                   rerender();
                 },
@@ -484,8 +538,8 @@ export function Game() {
         }
         break;
       case GameType.QUIZ:
-        if (gameState.guessCountry && gameState.selectedCountry) {
-          if (gameState.guessCountry.id === gameState.selectedCountry) {
+        if (gameState.guessCountry && innerGameState.selectedCountryId) {
+          if (gameState.guessCountry.id === innerGameState.selectedCountryId) {
             showSplashText('You are right!');
             chooseNextCountry();
           } else {
@@ -591,12 +645,12 @@ export function Game() {
                     </>
                   );
                 case GameType.DISCOVERY: {
-                  const {selectedCountry} = gameStateRef.current;
+                  const {selectedCountryId} = innerGameStateRef.current;
 
-                  if (!selectedCountry) {
+                  if (!selectedCountryId) {
                     return undefined;
                   }
-                  const country = countries.get(selectedCountry);
+                  const country = countries.get(selectedCountryId);
 
                   if (!country) {
                     return undefined;

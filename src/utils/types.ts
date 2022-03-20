@@ -38,8 +38,8 @@ export type ShaderProgram = {
 
 export type VaoObject = {
   vao: WebGLVertexArrayObject;
-  positionBuffer: WebGLBuffer;
-  uvBuffer: WebGLBuffer | undefined;
+  // positionBuffer: WebGLBuffer;
+  // uvBuffer: WebGLBuffer | undefined;
 };
 
 export enum CullFace {
@@ -64,7 +64,7 @@ export type CommonSceneObjectType = {
   disableDepthTest?: boolean;
   blendMode?: BlendMode;
   hidden?: boolean;
-  updateBuffers?: (positionData: number[], uvData: number[]) => void;
+  updateBuffers?: (positionData: number[], uvData: number[], colorData: number[]) => void;
 };
 
 export type ModelRenderInfo = {
@@ -118,23 +118,27 @@ export enum GameType {
   DISCOVERY,
 }
 
+export type CountryState = {
+  countryId: Country;
+  color: [number, number, number, number];
+};
+
 export type GameState =
   | {
       type: GameType.MENU;
+      countriesState: CountryState[];
     }
   | {
       type: GameType.GAME;
       guessCountry: CountryInfo | undefined;
-      failedCountries: Country[];
-      successCountries: Country[];
-      selectedCountry: Country | undefined;
+      countriesState: CountryState[];
     }
   | {
       type: GameType.QUIZ;
       guessCountry: CountryInfo | undefined;
-      selectedCountry: Country | undefined;
+      countriesState: CountryState[];
     }
   | {
       type: GameType.DISCOVERY;
-      selectedCountry: Country | undefined;
+      countriesState: CountryState[];
     };
