@@ -38,8 +38,6 @@ const current: {
   isCullFaceEnabled: boolean;
   cullFace: CullFace;
   depthTest: boolean | undefined;
-  successCountries: unknown | undefined;
-  failedCountries: unknown | undefined;
   isBlendModeEnabled: boolean;
   blendMode: BlendMode;
   countriesTextureState: unknown;
@@ -51,8 +49,6 @@ const current: {
   isCullFaceEnabled: false,
   cullFace: CullFace.BACK,
   depthTest: undefined,
-  successCountries: undefined,
-  failedCountries: undefined,
   isBlendModeEnabled: false,
   blendMode: BlendMode.OFF,
   countriesTextureState: undefined,
@@ -154,8 +150,8 @@ export function draw(
           case BlendMode.MIX:
             // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); //
             // gl.blendFunc(gl.SRC_ALPHA, gl.SRC_ALPHA_SATURATE); //
-            // gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); // Work when premultiplied in shader
-            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Work when texture is RGB
+            gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); // Work when premultiplied in shader
+            // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Work when texture is RGB
             break;
           default:
             throw neverCall(blendMode);
@@ -172,7 +168,8 @@ export function draw(
     setViewport(TEXTURE_SIZE.width, TEXTURE_SIZE.height);
     // setViewport(gl.canvas.width, gl.canvas.height);
 
-    gl.clearColor(0, 0, 0, 1);
+    // TODO: move to init
+    gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     for (const obj of scene.frameBufferObjects) {
@@ -232,6 +229,8 @@ export function draw(
           throw new Error();
       }
     }
+
+    gl.generateMipmap(gl.TEXTURE_2D);
 
     current.countriesTextureState = gameState.countriesState;
   }
@@ -299,35 +298,6 @@ export function draw(
 
     switch (obj.renderType) {
       case RenderType.DRAW_ELEMENTS: {
-        // const selectedCountryId =
-        //   gameState.type === GameType.GAME ||
-        //   gameState.type === GameType.QUIZ ||
-        //   gameState.type === GameType.DISCOVERY
-        //     ? gameState.selectedCountry
-        //     : undefined;
-        //
-        // const selectedCountry = selectedCountryId ? countries.get(selectedCountryId) : undefined;
-        //
-        // shader.setUniformUInt('u_selected', selectedCountry?.color ?? 0);
-        //
-        // if (gameState.type === GameType.GAME) {
-        //   if (current.successCountries !== gameState.successCountries) {
-        //     current.successCountries = gameState.successCountries;
-        //
-        //     const uSuccess = new Uint32Array(200);
-        //     uSuccess.set(mapCountriesToColor(gameState.successCountries));
-        //     shader.setUniformUIntArray('u_success', uSuccess);
-        //   }
-        //
-        //   if (current.failedCountries !== gameState.failedCountries) {
-        //     current.failedCountries = gameState.failedCountries;
-        //
-        //     const uFailed = new Uint32Array(10);
-        //     uFailed.set(mapCountriesToColor(gameState.failedCountries));
-        //     shader.setUniformUIntArray('u_failed', uFailed);
-        //   }
-        // }
-
         gl.drawElements(obj.renderMode, obj.elementsCount, obj.indexType, 0);
         break;
       }

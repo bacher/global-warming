@@ -36,7 +36,7 @@ export function getCountryStates({
 
   const selectedPart: CountryState[] =
     selectedCountryId && !isSelectedFound
-      ? [{countryId: selectedCountryId, color: [0.5, 0.5, 0, 1]}]
+      ? [{countryId: selectedCountryId, color: [1, 0.64, 0, 1]}]
       : [];
 
   return [...successPart, ...failedPart, ...selectedPart];

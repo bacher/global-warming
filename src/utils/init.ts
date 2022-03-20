@@ -24,10 +24,12 @@ import {equatorFragmentShaderInfo} from '../shaders/equator.fragment';
 import type {Assets} from './loader';
 import {mat4} from 'gl-matrix';
 import {TEXTURE_SIZE} from '../data/textures';
-import {simpleVertexShaderInfo} from '../shaders/simple.vertex';
-import {textureFragmentShaderInfo} from '../shaders/texture.fragment';
 import {countriesVertexShaderInfo} from '../shaders/countries.vertex';
 import {countriesFragmentShaderInfo} from '../shaders/countries.fragment';
+
+const EARTH_TEXTURE_UNIT = 0;
+const ATLAS_TEXTURE_UNIT = 1;
+const COUNTRIES_TEXTURE_UNIT = 2;
 
 function createShader(gl: WebGL2RenderingContext, type: GLenum, source: string): WebGLShader {
   const shader = gl.createShader(type);
@@ -226,11 +228,16 @@ function createStaticArrayBuffer(gl: WebGL2RenderingContext, data: BufferSource)
   return arrayBuffer;
 }
 
+type TextureParams = {
+  textureUnitIndex: number;
+  alpha?: boolean;
+  mipmap?: boolean;
+};
+
 function createTexture(
   gl: WebGL2RenderingContext,
   textureImage: HTMLImageElement,
-  textureUnitIndex = 0,
-  smooth = false,
+  {textureUnitIndex, mipmap = false, alpha = false}: TextureParams,
 ): WebGLTexture {
   gl.activeTexture(gl.TEXTURE0 + textureUnitIndex);
 
@@ -243,17 +250,21 @@ function createTexture(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-  if (smooth) {
+  if (mipmap) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   } else {
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   }
 
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImage);
+  if (alpha) {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImage);
+  } else {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, textureImage);
+  }
 
-  if (smooth) {
+  if (mipmap) {
     gl.generateMipmap(gl.TEXTURE_2D);
   }
 
@@ -263,8 +274,7 @@ function createTexture(
 function createEmptyTexture(
   gl: WebGL2RenderingContext,
   {width, height}: {width: number; height: number},
-  textureUnitIndex: number,
-  withoutAlpha = false,
+  {textureUnitIndex, mipmap, alpha}: TextureParams,
 ): WebGLTexture {
   gl.activeTexture(gl.TEXTURE0 + textureUnitIndex);
 
@@ -275,16 +285,25 @@ function createEmptyTexture(
 
   gl.bindTexture(gl.TEXTURE_2D, targetTexture);
 
-  if (withoutAlpha) {
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, null);
-  } else {
+  if (alpha) {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  } else {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, null);
   }
 
   // TODO: HOW TO ADD MIPMAP?
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  if (mipmap) {
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  } else {
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  }
+
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+  if (mipmap) {
+    gl.generateMipmap(gl.TEXTURE_2D);
+  }
 
   return targetTexture;
 }
@@ -372,15 +391,25 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
 
   const {indexBuffer, positionBuffer, uvBuffer, model} = createBuffers(gl, models.earth);
 
-  // const earthTexture = createTexture(gl, textures.earth, 0, true);
-  const countriesTexture = createTexture(gl, textures.countries, 1);
-  const countriesAtlasTexture = createTexture(gl, textures.countriesAtlas, 2);
-  const countriesTexture2 = createEmptyTexture(gl, TEXTURE_SIZE, 0, true);
+  const earthTexture = createTexture(gl, textures.earth, {
+    textureUnitIndex: EARTH_TEXTURE_UNIT,
+    mipmap: true,
+  });
+  const countriesAtlasTexture = createTexture(gl, textures.countriesAtlas, {
+    textureUnitIndex: ATLAS_TEXTURE_UNIT,
+  });
+  const countriesTexture = createEmptyTexture(gl, TEXTURE_SIZE, {
+    textureUnitIndex: COUNTRIES_TEXTURE_UNIT,
+    alpha: true,
+    mipmap: true,
+  });
 
-  const countriesFrameBuffer = createFrameBuffer(gl, countriesTexture2);
+  // gl.bindTexture(gl.TEXTURE_2D, null);
+
+  const countriesFrameBuffer = createFrameBuffer(gl, countriesTexture);
 
   gl.useProgram(countriesShaderProgram.program);
-  countriesShaderProgram.setUniformInt('u_texture', 2);
+  countriesShaderProgram.setUniformInt('u_texture', ATLAS_TEXTURE_UNIT);
 
   const trianglePositionBuffer = createArrayBuffer(gl);
   const triangleUvBuffer = createArrayBuffer(gl);
@@ -451,8 +480,8 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
     ],
   });
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-  gl.uniform1i(shaderProgram.locations.getUniform('u_texture'), 0);
-  gl.uniform1i(shaderProgram.locations.getUniform('u_texture2'), 1);
+  gl.uniform1i(shaderProgram.locations.getUniform('u_texture'), EARTH_TEXTURE_UNIT);
+  gl.uniform1i(shaderProgram.locations.getUniform('u_texture2'), COUNTRIES_TEXTURE_UNIT);
 
   const earthMatrix = mat4.create();
   mat4.fromRotation(earthMatrix, -0.064 * Math.PI, [0, 1, 0]);
