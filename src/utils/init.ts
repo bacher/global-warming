@@ -262,6 +262,7 @@ function createEmptyTexture(
   gl: WebGL2RenderingContext,
   {width, height}: {width: number; height: number},
   textureUnitIndex: number,
+  withoutAlpha = false,
 ): WebGLTexture {
   gl.activeTexture(gl.TEXTURE0 + textureUnitIndex);
 
@@ -272,7 +273,11 @@ function createEmptyTexture(
 
   gl.bindTexture(gl.TEXTURE_2D, targetTexture);
 
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  if (withoutAlpha) {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, null);
+  } else {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  }
 
   // TODO: HOW TO ADD MIPMAP?
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -374,7 +379,7 @@ export function initialize(gl: WebGL2RenderingContext, {models, textures}: Asset
   // const earthTexture = createTexture(gl, textures.earth, 0, true);
   const countriesTexture = createTexture(gl, textures.countries, 1);
   const countriesAtlasTexture = createTexture(gl, textures.countriesAtlas, 2);
-  const countriesTexture2 = createEmptyTexture(gl, TEXTURE_SIZE, 0);
+  const countriesTexture2 = createEmptyTexture(gl, TEXTURE_SIZE, 0, true);
 
   const countriesFrameBuffer = createFrameBuffer(gl, countriesTexture2);
 

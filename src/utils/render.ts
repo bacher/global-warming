@@ -157,8 +157,10 @@ export function draw(
       if (blendMode !== current.blendMode) {
         switch (blendMode) {
           case BlendMode.MIX:
-            // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-            gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+            // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); //
+            // gl.blendFunc(gl.SRC_ALPHA, gl.SRC_ALPHA_SATURATE); //
+            // gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); // Work when premultiplied in shader
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Work when texture is RGB
             break;
           default:
             throw neverCall(blendMode);
