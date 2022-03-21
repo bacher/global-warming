@@ -538,6 +538,7 @@ export function Game() {
           ) {
             innerGameStateRef.current = {
               ...innerGameStateRef.current,
+              selectedCountryId: undefined,
               failedCountryIds: [
                 ...innerGameStateRef.current.failedCountryIds,
                 originalGuessCountry.id,
