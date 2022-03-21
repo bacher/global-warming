@@ -15,22 +15,26 @@ export function getCountryStates({
   let isSelectedFound = false;
 
   const successPart: CountryState[] = successCountryIds.map((countryId) => {
-    isSelectedFound =
-      !isSelectedFound && Boolean(selectedCountryId) && countryId === selectedCountryId;
+    const isSelected = selectedCountryId && countryId === selectedCountryId;
+    if (isSelected) {
+      isSelectedFound = true;
+    }
 
     return {
       countryId,
-      color: isSelectedFound ? [0, 1, 0, 1] : [0, 0.7, 0, 1],
+      color: isSelected ? [0, 1, 0, 1] : [0, 0.7, 0, 1],
     };
   });
 
   const failedPart: CountryState[] = failedCountryIds.map((countryId) => {
-    isSelectedFound =
-      !isSelectedFound && Boolean(selectedCountryId) && countryId === selectedCountryId;
+    const isSelected = selectedCountryId && countryId === selectedCountryId;
+    if (isSelected) {
+      isSelectedFound = true;
+    }
 
     return {
       countryId,
-      color: isSelectedFound ? [1, 0, 0, 1] : [0.7, 0, 0, 1],
+      color: isSelected ? [1, 0, 0, 1] : [0.7, 0, 0, 1],
     };
   });
 
