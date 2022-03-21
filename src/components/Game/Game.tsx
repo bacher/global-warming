@@ -381,6 +381,11 @@ export function Game() {
       guessCountry: country,
       countriesState: [],
     };
+    innerGameStateRef.current = {
+      selectedCountryId: undefined,
+      successCountryIds: [],
+      failedCountryIds: [],
+    };
 
     rerender();
   });
@@ -574,7 +579,7 @@ export function Game() {
 
     if (
       !mouseDragRef.current.isRealDragging &&
-      (Math.abs(mouseDragRef.current.x) > 2 || Math.abs(mouseDragRef.current.y) > 2)
+      (Math.abs(mouseDragRef.current.x) > 3 || Math.abs(mouseDragRef.current.y) > 3)
     ) {
       mouseDragRef.current.isRealDragging = true;
     }
