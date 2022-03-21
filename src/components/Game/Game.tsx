@@ -463,13 +463,19 @@ export function Game() {
         selectedCountryId: undefined,
       };
 
-      showBlockText('You guessed all countries!', {}, () => {
-        gameStateRef.current = {
-          type: GameType.MENU,
-          countriesState: gameStateRef.current.countriesState,
-        };
-        rerender();
-      });
+      showBlockText(
+        innerGameStateRef.current.failedCountryIds.length > 0
+          ? 'You won!'
+          : 'You guessed all countries!',
+        {},
+        () => {
+          gameStateRef.current = {
+            type: GameType.MENU,
+            countriesState: gameStateRef.current.countriesState,
+          };
+          rerender();
+        },
+      );
     }
   });
 
