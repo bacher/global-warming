@@ -4,7 +4,7 @@
   "private": true,
   "description": "",
   "scripts": {
-    "start": "react-scripts start"
+    "start": "PORT=4000 react-scripts start"
   },
   "keywords": [],
   "author": "",

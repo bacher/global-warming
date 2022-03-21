@@ -1,5 +1,6 @@
 import {useEffect, useRef} from 'react';
 
+import {TEXTURE_SIZE} from '../../data/textures';
 import {Country, getCountryByColor} from '../../data/countries';
 import type {Point2d} from '../../utils/types';
 
@@ -19,8 +20,8 @@ export function CountriesCanvas({image}: Props) {
     // @ts-ignore
     window.lookupCountryByUv = ([u, v]: Point2d): Country | undefined => {
       const q = ctx.getImageData(
-        Math.floor(u * 2098),
-        Math.floor(v * 1574),
+        Math.floor(u * TEXTURE_SIZE.width),
+        Math.floor(v * TEXTURE_SIZE.height),
         1,
         1,
       );
@@ -29,9 +30,9 @@ export function CountriesCanvas({image}: Props) {
 
       const output = document.getElementById('debugOutput');
       if (output) {
-        output.innerText = `Hover color: ${q.data[0]} (0x${q.data[0].toString(
-          16,
-        )})\nCountry: ${country ?? '-'}`;
+        output.innerText = `Hover color: ${q.data[0]} (0x${q.data[0].toString(16)})\nCountry: ${
+          country ?? '-'
+        }`;
       }
 
       return country;
@@ -42,8 +43,8 @@ export function CountriesCanvas({image}: Props) {
     <div className={styles.root}>
       <canvas
         ref={canvasRef}
-        width={2098}
-        height={1574}
+        width={TEXTURE_SIZE.width}
+        height={TEXTURE_SIZE.height}
         className={styles.canvas}
       />
     </div>

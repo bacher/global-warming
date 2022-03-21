@@ -1,5 +1,5 @@
-import {CountryState} from './types';
-import {Country} from '../data/countries';
+import type {Country} from '../data/countries';
+import type {CountryState} from './types';
 
 type Params = {
   selectedCountryId: Country | undefined;

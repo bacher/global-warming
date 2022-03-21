@@ -4,8 +4,8 @@ import styles from './App.module.scss';
 
 const textureSize = {width: 2098, height: 1574};
 
-const targetTextureSize = {width: 2048, height: 2048};
-const DIMENSION = 65;
+const targetTextureSize = {width: 1024, height: 1024};
+const DIMENSION = 63;
 const GAP = 10;
 const CELL_SIZE = Math.floor((targetTextureSize.width - GAP) / DIMENSION - GAP);
 
@@ -291,15 +291,35 @@ export function App() {
       drawDebugGrid(outCtx, countries);
 
       outputRef.current!.value = JSON.stringify(
-        countries.map((country) => ({
-          color: country.color,
-          srcX: country.x - GAP / 2,
-          srcY: country.y - GAP / 2,
-          x: GAP + (CELL_SIZE + GAP) * country.cellX - GAP / 2,
-          y: GAP + (CELL_SIZE + GAP) * country.cellY - GAP / 2,
-          width: country.width + GAP,
-          height: country.height + GAP,
-        })),
+        {
+          atlas: {
+            width: targetTextureSize.width,
+            height: targetTextureSize.height,
+          },
+          countries: countries.map((country) => {
+            const x = GAP + (CELL_SIZE + GAP) * country.cellX - GAP / 2;
+            const y = GAP + (CELL_SIZE + GAP) * country.cellY - GAP / 2;
+
+            const width = country.width + GAP;
+            const height = country.height + GAP;
+
+            return {
+              color: country.color,
+              srcX: country.x - GAP / 2,
+              srcY: country.y - GAP / 2,
+              width,
+              height,
+              uv1: {
+                u: x / targetTextureSize.width,
+                v: y / targetTextureSize.height,
+              },
+              uv2: {
+                u: (x + width) / targetTextureSize.width,
+                v: (y + height) / targetTextureSize.height,
+              },
+            };
+          }),
+        },
         null,
         2,
       );

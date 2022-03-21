@@ -36,7 +36,7 @@ enum Tag {
 }
 
 type CountryDetails = {
-  color: number;
+  color: number | number[];
   title: string;
   tags: Tag[];
 };
@@ -45,15 +45,22 @@ type AtlasEntry = {
   color: number;
   srcX: number;
   srcY: number;
-  x: number;
-  y: number;
   width: number;
   height: number;
+  uv1: {
+    u: number;
+    v: number;
+  };
+  uv2: {
+    u: number;
+    v: number;
+  };
 };
 
-export type CountryInfo = CountryDetails & {
+export type CountryInfo = Omit<CountryDetails, 'color'> & {
   id: Country;
-  atlasData: AtlasEntry;
+  colors: number[];
+  atlasData: AtlasEntry[];
 };
 
 type Countries = Map<Country, CountryInfo>;
@@ -230,7 +237,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
   [
     Country.AUSTRALIA,
     {
-      color: 0x83,
+      color: [0x83, 0x84],
       title: 'Australia',
       tags: [],
     },
@@ -262,28 +269,37 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
 ]);
 
 // @ts-ignore
-export const countries = [...countriesInitial.entries()].reduce<Countries>((acc, [id, info]) => {
-  const atlasData = atlas.find((atlasEntry) => atlasEntry.color === info.color);
+export const countries = [...countriesInitial.entries()].reduce<Countries>(
+  (acc, [id, info]: [Country, CountryDetails]) => {
+    const colors = Array.isArray(info.color) ? info.color : [info.color];
 
-  if (!atlasData) {
-    throw new Error('No country atlas data');
-  }
+    const atlasData = colors.map((color) => {
+      const data = atlas.countries.find((atlasEntry) => atlasEntry.color === color);
+      if (!data) {
+        throw new Error('No country atlas data');
+      }
+      return data;
+    });
 
-  acc.set(id, {
-    id,
-    ...info,
-    atlasData,
-  });
-  return acc;
-}, new Map());
-
-export const countriesByColor: Map<number, Country> = new Map(
-  // @ts-ignore
-  [...countries.entries()].map(([countryId, data]) => [
-    data.color,
-    countryId as unknown as Country,
-  ]),
+    acc.set(id, {
+      id,
+      title: info.title,
+      tags: info.tags,
+      colors,
+      atlasData,
+    });
+    return acc;
+  },
+  new Map(),
 );
+
+export const countriesByColor: Map<number, Country> = new Map();
+
+for (const [countryId, country] of countries.entries() as any) {
+  for (const color of country.colors) {
+    countriesByColor.set(color, countryId);
+  }
+}
 
 export function getRandomCountryExcept(ignoreCountries: Country[]): CountryInfo | undefined {
   // @ts-ignore

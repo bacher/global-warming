@@ -1,6 +1,6 @@
 import {mat4} from 'gl-matrix';
 
-import {ATLAS_SIZE, TEXTURE_SIZE} from '../data/textures';
+import {TEXTURE_SIZE} from '../data/textures';
 import type {GameState, Scene, ShaderProgram, Shaders} from './types';
 import {CullFace, GameType, ObjectType, ViewportSize} from './types';
 import {BlendMode, RenderType} from './modelTypes';
@@ -181,29 +181,28 @@ export function draw(
         for (const {countryId, color} of gameState.countriesState) {
           const {atlasData} = countries.get(countryId)!;
 
-          const x0 = (atlasData.srcX / TEXTURE_SIZE.width) * 2 - 1;
-          const y0 = (atlasData.srcY / TEXTURE_SIZE.height) * 2 - 1;
-          const x1 = x0 + (atlasData.width / TEXTURE_SIZE.width) * 2;
-          const y1 = y0 + (atlasData.height / TEXTURE_SIZE.height) * 2;
+          for (const area of atlasData) {
+            const {uv1, uv2} = area;
 
-          const ux0 = atlasData.x / ATLAS_SIZE.width;
-          const uy0 = atlasData.y / ATLAS_SIZE.height;
-          const ux1 = ux0 + atlasData.width / ATLAS_SIZE.width;
-          const uy1 = uy0 + atlasData.height / ATLAS_SIZE.height;
+            const x0 = (area.srcX / TEXTURE_SIZE.width) * 2 - 1;
+            const y0 = (area.srcY / TEXTURE_SIZE.height) * 2 - 1;
+            const x1 = x0 + (area.width / TEXTURE_SIZE.width) * 2;
+            const y1 = y0 + (area.height / TEXTURE_SIZE.height) * 2;
 
-          const p1 = [x0, y0, 0];
-          const p2 = [x1, y0, 0];
-          const p3 = [x0, y1, 0];
-          const p4 = [x1, y1, 0];
+            const p1 = [x0, y0, 0];
+            const p2 = [x1, y0, 0];
+            const p3 = [x0, y1, 0];
+            const p4 = [x1, y1, 0];
 
-          const u1 = [ux0, uy0];
-          const u2 = [ux1, uy0];
-          const u3 = [ux0, uy1];
-          const u4 = [ux1, uy1];
+            const u1 = [uv1.u, uv1.v];
+            const u2 = [uv2.u, uv1.v];
+            const u3 = [uv1.u, uv2.v];
+            const u4 = [uv2.u, uv2.v];
 
-          posData.push(...[...p1, ...p2, ...p3, ...p2, ...p3, ...p4]);
-          uvData.push(...[...u1, ...u2, ...u3, ...u2, ...u3, ...u4]);
-          colorData.push(...[...color, ...color, ...color, ...color, ...color, ...color]);
+            posData.push(...[...p1, ...p2, ...p3, ...p2, ...p3, ...p4]);
+            uvData.push(...[...u1, ...u2, ...u3, ...u2, ...u3, ...u4]);
+            colorData.push(...[...color, ...color, ...color, ...color, ...color, ...color]);
+          }
         }
 
         obj.updateBuffers!(posData, uvData, colorData);
