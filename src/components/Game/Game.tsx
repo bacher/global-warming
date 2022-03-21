@@ -1,5 +1,6 @@
-import {mat4} from 'gl-matrix';
 import {useEffect, useMemo, useRef, useState} from 'react';
+import {mat4} from 'gl-matrix';
+import cn from 'classnames';
 
 import {countries, Country, getRandomCountryExcept} from '../../data/countries';
 import {initialize} from '../../utils/init';
@@ -7,7 +8,7 @@ import {compareDrawParams, draw, DrawParams} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
 import {makeMemorizedGetSelectedCountry} from '../../utils/debug';
 import type {DirectionState, GameState, ViewportSize} from '../../utils/types';
-import {GameType} from '../../utils/types';
+import {GameType, InGameState} from '../../utils/types';
 import {bound} from '../../utils/math';
 import {formatNumber} from '../../utils/format';
 import {useFpsCounter} from '../../hooks/useFpsCounter';
@@ -22,6 +23,7 @@ import {StartMenu} from '../StartMenu';
 import {CountriesCanvas} from '../CountriesCanvas';
 import styles from './Game.module.scss';
 import {getCountryStates} from '../../utils/countryState';
+import {wait} from '../../utils/time';
 
 const SPIN_SPEED = 0.16;
 const ROLL_SPEED = 0.14;
@@ -34,7 +36,7 @@ const MAXIMUM_DISTANCE = 40;
 const MOUSE_DRAG_SPIN_SPEED = 0.0014;
 const MOUSE_DRAG_ROLL_SPEED = 0.001;
 
-const WARMING_TRIES_COUNT = 10;
+const WARMING_TRIES_COUNT = 3;
 
 function printDirection(directionState: DirectionState): void {
   const outputElement = document.getElementById('output');
@@ -367,7 +369,7 @@ export function Game() {
     toggleKey(event.code, false);
   });
 
-  const onStartGameClick = useHandler(() => {
+  const onStartGameClick = useHandler(async () => {
     alreadyGuessedCountriesRef.current = [];
 
     const country = getRandomCountryExcept([]);
@@ -378,7 +380,8 @@ export function Game() {
 
     gameStateRef.current = {
       type: GameType.GAME,
-      guessCountry: country,
+      inGameState: InGameState.STARTING,
+      guessCountry: undefined,
       countriesState: [],
     };
     innerGameStateRef.current = {
@@ -386,7 +389,14 @@ export function Game() {
       successCountryIds: [],
       failedCountryIds: [],
     };
+    rerender();
 
+    await wait(1000);
+    gameStateRef.current = {
+      ...gameStateRef.current,
+      inGameState: InGameState.FINDING,
+      guessCountry: country,
+    };
     rerender();
   });
 
@@ -463,54 +473,103 @@ export function Game() {
     }
   });
 
-  const handleCanvasClick = useHandler((event) => {
+  const handleCanvasClick = useHandler(async (event) => {
     event.preventDefault();
 
     if (mouseDragRef.current.isRealDragging) {
       return;
     }
 
-    const gameState = gameStateRef.current;
     const innerGameState = innerGameStateRef.current;
     const selectedCountryId = innerGameState.selectedCountryId;
 
-    switch (gameState.type) {
+    switch (gameStateRef.current.type) {
       case GameType.GAME:
-        if (gameState.guessCountry && selectedCountryId) {
-          if (gameState.guessCountry.id === selectedCountryId) {
+        if (gameStateRef.current.inGameState !== InGameState.FINDING) {
+          break;
+        }
+
+        const originalGuessCountry = gameStateRef.current.guessCountry;
+
+        if (originalGuessCountry && selectedCountryId) {
+          if (originalGuessCountry.id === selectedCountryId) {
             innerGameStateRef.current = {
               ...innerGameStateRef.current,
               successCountryIds: [
                 ...innerGameStateRef.current.successCountryIds,
-                gameState.guessCountry.id,
+                originalGuessCountry.id,
               ],
             };
 
+            gameStateRef.current = {
+              ...gameStateRef.current,
+              inGameState: InGameState.SWITCHING,
+            };
+
             showSplashText('You are right!');
-            alreadyGuessedCountriesRef.current.push(gameState.guessCountry.id);
+
+            await wait(1000);
+
+            gameStateRef.current = {
+              ...gameStateRef.current,
+              guessCountry: undefined,
+            };
+            rerender();
+
+            await wait(700);
+
+            alreadyGuessedCountriesRef.current.push(originalGuessCountry.id);
+            gameStateRef.current = {
+              ...gameStateRef.current,
+              inGameState: InGameState.FINDING,
+            };
             chooseNextCountry();
-          } else if (!innerGameState.successCountryIds.includes(selectedCountryId)) {
+          } else if (
+            !innerGameState.successCountryIds.includes(selectedCountryId) &&
+            !innerGameState.failedCountryIds.includes(selectedCountryId)
+          ) {
             innerGameStateRef.current = {
               ...innerGameStateRef.current,
               failedCountryIds: [
                 ...innerGameStateRef.current.failedCountryIds,
-                gameState.guessCountry.id,
+                originalGuessCountry.id,
               ],
             };
+
+            gameStateRef.current = {
+              ...gameStateRef.current,
+              inGameState: InGameState.SWITCHING,
+            };
+            rerender();
 
             if (innerGameStateRef.current.failedCountryIds.length < WARMING_TRIES_COUNT) {
               showSplashText(
                 <p>
                   You get wrong
                   <br />
-                  {gameState.guessCountry.title} is burned
+                  {originalGuessCountry.title} is burned
                 </p>,
                 {
                   type: SplashStyle.SMALL_BAD,
                   timeout: 3000,
                 },
               );
-              alreadyGuessedCountriesRef.current.push(gameState.guessCountry.id);
+              await wait(3000);
+
+              gameStateRef.current = {
+                ...gameStateRef.current,
+                guessCountry: undefined,
+              };
+              rerender();
+
+              await wait(100);
+
+              alreadyGuessedCountriesRef.current.push(originalGuessCountry.id);
+
+              gameStateRef.current = {
+                ...gameStateRef.current,
+                inGameState: InGameState.FINDING,
+              };
               chooseNextCountry();
             } else {
               innerGameStateRef.current = {
@@ -518,7 +577,10 @@ export function Game() {
                 selectedCountryId: undefined,
               };
 
-              gameState.guessCountry = undefined;
+              gameStateRef.current = {
+                ...gameStateRef.current,
+                guessCountry: undefined,
+              };
 
               showBlockText(
                 <p>
@@ -543,8 +605,8 @@ export function Game() {
         }
         break;
       case GameType.QUIZ:
-        if (gameState.guessCountry && innerGameState.selectedCountryId) {
-          if (gameState.guessCountry.id === innerGameState.selectedCountryId) {
+        if (gameStateRef.current.guessCountry && innerGameState.selectedCountryId) {
+          if (gameStateRef.current.guessCountry.id === innerGameState.selectedCountryId) {
             showSplashText('You are right!');
             chooseNextCountry();
           } else {
@@ -618,24 +680,45 @@ export function Game() {
           <div className={styles.ui}>
             {(() => {
               switch (gameStateRef.current.type) {
-                case GameType.GAME:
+                case GameType.GAME: {
+                  const {inGameState, guessCountry} = gameStateRef.current;
+
                   return (
                     <>
-                      {gameStateRef.current.guessCountry && (
+                      {[InGameState.STARTING, InGameState.SWITCHING, InGameState.FINDING].includes(
+                        inGameState,
+                      ) && (
                         <div className={styles.column}>
-                          <p className={styles.gameText}>
-                            <span className={styles.warming}>Global warming</span> is coming, you
-                            have to <span className={styles.cool}>cool</span> the
-                            <br />
-                            <span className={styles.countryName}>
-                              {gameStateRef.current.guessCountry.title}
-                            </span>
-                          </p>
+                          <div
+                            className={cn(styles.gameText, {
+                              [styles.starting]: inGameState === InGameState.STARTING,
+                            })}
+                          >
+                            <p>
+                              <span className={styles.warming}>Global warming</span> is coming, you
+                              have to <span className={styles.cool}>cool</span> the
+                            </p>
+                            <p>
+                              {guessCountry && inGameState !== InGameState.STARTING ? (
+                                <span
+                                  className={cn(styles.countryName, {
+                                    [styles.animate]: inGameState === InGameState.FINDING,
+                                    [styles.animateOut]: inGameState === InGameState.SWITCHING,
+                                  })}
+                                >
+                                  {guessCountry.title}
+                                </span>
+                              ) : (
+                                <span className={styles.countryName}>&nbsp;</span>
+                              )}
+                            </p>
+                          </div>
                         </div>
                       )}
                       {splash}
                     </>
                   );
+                }
                 case GameType.QUIZ:
                   return (
                     <>

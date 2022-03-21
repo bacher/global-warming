@@ -118,6 +118,13 @@ export enum GameType {
   DISCOVERY,
 }
 
+export enum InGameState {
+  STARTING = 1,
+  SWITCHING,
+  FINDING,
+  ENDING,
+}
+
 export type CountryState = {
   countryId: Country;
   color: [number, number, number, number];
@@ -130,6 +137,7 @@ export type GameState =
     }
   | {
       type: GameType.GAME;
+      inGameState: InGameState;
       guessCountry: CountryInfo | undefined;
       countriesState: CountryState[];
     }
