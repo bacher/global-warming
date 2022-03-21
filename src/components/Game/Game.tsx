@@ -296,7 +296,9 @@ export function Game() {
       const innerGameState = innerGameStateRef.current;
 
       if (
-        (gameState.type === GameType.GAME && gameState.guessCountry) ||
+        (gameState.type === GameType.GAME &&
+          gameState.inGameState !== InGameState.ENDING &&
+          gameState.inGameState !== InGameState.SWITCHING) ||
         (gameState.type === GameType.QUIZ && gameState.guessCountry) ||
         gameState.type === GameType.DISCOVERY
       ) {
