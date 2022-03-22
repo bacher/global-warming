@@ -38,11 +38,17 @@ const MOUSE_DRAG_ROLL_SPEED = 0.001;
 
 const WARMING_TRIES_COUNT = 3;
 
+function radToDeg(rad: number) {
+  return (180 * rad) / Math.PI;
+}
+
 function printDirection(directionState: DirectionState): void {
+  const {roll, spin} = directionState.direction;
+
   const outputElement = document.getElementById('output');
   if (outputElement) {
-    outputElement.innerText = `Roll: ${formatNumber(directionState.direction.roll)}rad
-Spin: ${formatNumber(directionState.direction.spin)}rad
+    outputElement.innerText = `Lat: ${formatNumber(radToDeg(-roll))}° ${formatNumber(-roll)}rad
+Lng: ${formatNumber(radToDeg(spin))}° ${formatNumber(spin)}rad
 Distance: ${formatNumber(directionState.distance, 0)}`;
   }
 }
@@ -64,7 +70,7 @@ export function Game() {
   const mouseDragRef = useRef({x: 0, y: 0, isRealDragging: false});
   const directionState = useMemo<DirectionState>(
     () => ({
-      direction: {spin: -2.63, roll: -0.75},
+      direction: {spin: 0.51, roll: -0.75},
       distance: 1000,
     }),
     [],
@@ -81,6 +87,7 @@ export function Game() {
   const lastDrawParamsRef = useRef<DrawParams | undefined>();
   const lastEarthMatrixRef = useRef<mat4 | undefined>();
   const getSelectedCountryMemorized = useMemo(makeMemorizedGetSelectedCountry, []);
+  const showCrosshair = useMemo(() => window.location.search.includes('crosshair'), []);
 
   const innerGameStateRef = useRef<InnerGameState>({
     selectedCountryId: undefined,
@@ -112,8 +119,9 @@ export function Game() {
   function updateDirection(callback: (state: DirectionState) => DirectionState) {
     const {direction, distance} = callback(directionState);
 
+    const max = Math.PI * 0.44444;
     directionState.direction = {
-      roll: bound(direction.roll, -Math.PI * 0.45, Math.PI * 0.45),
+      roll: bound(direction.roll, -max, max),
       spin: direction.spin,
     };
 
@@ -563,6 +571,11 @@ export function Game() {
                   timeout: 3000,
                 },
               );
+              // TODO: Spin with animation
+              directionState.direction = {
+                roll: -originalGuessCountry.center[0],
+                spin: originalGuessCountry.center[1],
+              };
               await wait(3000);
 
               gameStateRef.current = {
@@ -686,7 +699,7 @@ export function Game() {
             onMouseDown={onMouseDown}
             onClick={isDragging ? (event) => event.preventDefault() : handleCanvasClick}
           />
-          <div className={styles.ui}>
+          <div className={cn(styles.ui, {[styles.crosshair]: showCrosshair})}>
             {(() => {
               switch (gameStateRef.current.type) {
                 case GameType.GAME: {

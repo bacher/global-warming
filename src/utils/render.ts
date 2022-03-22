@@ -255,7 +255,7 @@ export function draw(
   const matrix = mat4.clone(cameraMatrixData.matrix);
   mat4.translate(matrix, matrix, [0, 0, -params.distance]);
   mat4.rotateX(matrix, matrix, -params.direction.roll);
-  mat4.rotateY(matrix, matrix, -params.direction.spin);
+  mat4.rotateY(matrix, matrix, -params.direction.spin - Math.PI);
 
   let earthMatrix: mat4;
 
