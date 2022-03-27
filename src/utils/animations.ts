@@ -1,4 +1,5 @@
 import type {DirectionState} from './types';
+import {easeOutCirc} from './easing';
 
 const INTRO_ANIMATION_DURATION = 1000;
 const TARGET_DISTANCE = 12;
@@ -16,16 +17,12 @@ export function createIntroAnimation(
 
   return {
     update: () => {
-      const delta = Date.now() - startTs;
-      const ratio = Math.min(
-        1,
-        Math.log2(1 + delta / INTRO_ANIMATION_DURATION),
-      );
+      const ratio = Math.min(1, (Date.now() - startTs) / INTRO_ANIMATION_DURATION);
+      const r = easeOutCirc(ratio);
 
-      direction.distance =
-        initialDistance - (initialDistance - TARGET_DISTANCE) * ratio;
+      direction.distance = initialDistance - (initialDistance - TARGET_DISTANCE) * r;
 
-      if (ratio === 1) {
+      if (ratio >= 1) {
         onDone();
       }
     },

@@ -24,6 +24,8 @@ import {CountriesCanvas} from '../CountriesCanvas';
 import styles from './Game.module.scss';
 import {getCountryStates} from '../../utils/countryState';
 import {wait} from '../../utils/time';
+import {getNearestRotation} from '../../utils/rotation';
+import {easeInOutQuad} from '../../utils/easing';
 
 const SPIN_SPEED = 0.16;
 const ROLL_SPEED = 0.14;
@@ -59,6 +61,13 @@ type InnerGameState = {
   failedCountryIds: Country[];
 };
 
+type RotationAnimation = {
+  startTs: number;
+  duration: number;
+  onTick: (ratio: number) => void;
+  onDone?: () => void;
+};
+
 export function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -75,6 +84,8 @@ export function Game() {
     }),
     [],
   );
+  const disableUserRotationRef = useRef(false);
+  const rotationAnimationRef = useRef<RotationAnimation | undefined>();
   const lastApplyTsRef = useRef<number | undefined>();
   const alreadyGuessedCountriesRef = useRef<Country[]>([]);
   const [isDragging, setDragging] = useState(false);
@@ -131,61 +142,75 @@ export function Game() {
   function updateGameState(): void {
     const now = Date.now();
 
+    if (rotationAnimationRef.current) {
+      const {startTs, duration, onTick, onDone} = rotationAnimationRef.current;
+      const ratio = Math.min(1, (now - startTs) / duration);
+
+      onTick(ratio);
+
+      if (ratio >= 1) {
+        rotationAnimationRef.current = undefined;
+        onDone?.();
+      }
+    }
+
     let deltaRoll = 0;
     let deltaSpin = 0;
     let deltaDistance = 0;
 
     if (isInGame()) {
-      if (lastApplyTsRef.current) {
-        const passed = (now - lastApplyTsRef.current) / 1000;
+      if (!disableUserRotationRef.current) {
+        if (lastApplyTsRef.current) {
+          const passed = (now - lastApplyTsRef.current) / 1000;
 
-        let x = 0;
-        let y = 0;
-        let distanceUpdate = 0;
+          let x = 0;
+          let y = 0;
+          let distanceUpdate = 0;
 
-        if (pressedMap.has('KeyA')) {
-          x -= 1;
+          if (pressedMap.has('KeyA')) {
+            x -= 1;
+          }
+
+          if (pressedMap.has('KeyD')) {
+            x += 1;
+          }
+
+          if (pressedMap.has('KeyW')) {
+            y -= 1;
+          }
+
+          if (pressedMap.has('KeyS')) {
+            y += 1;
+          }
+
+          if (pressedMap.has('KeyE')) {
+            distanceUpdate -= 1;
+          }
+
+          if (pressedMap.has('KeyQ')) {
+            distanceUpdate += 1;
+          }
+
+          if (x !== 0 && y !== 0) {
+            x *= 0.71;
+            y *= 0.71;
+          }
+
+          deltaRoll = y * passed * 2 * Math.PI * ROLL_SPEED;
+          deltaSpin = x * passed * 2 * Math.PI * SPIN_SPEED;
+          deltaDistance = distanceUpdate * passed * ZOOM_SPEED;
         }
 
-        if (pressedMap.has('KeyD')) {
-          x += 1;
+        const mouseDrag = mouseDragRef.current;
+
+        if (mouseDrag.x || mouseDrag.y) {
+          const distanceModifier = directionState.distance / 12;
+          deltaRoll -= mouseDrag.y * MOUSE_DRAG_ROLL_SPEED * distanceModifier;
+          deltaSpin -= mouseDrag.x * MOUSE_DRAG_SPIN_SPEED * distanceModifier;
+
+          mouseDrag.x = 0;
+          mouseDrag.y = 0;
         }
-
-        if (pressedMap.has('KeyW')) {
-          y -= 1;
-        }
-
-        if (pressedMap.has('KeyS')) {
-          y += 1;
-        }
-
-        if (pressedMap.has('KeyE')) {
-          distanceUpdate -= 1;
-        }
-
-        if (pressedMap.has('KeyQ')) {
-          distanceUpdate += 1;
-        }
-
-        if (x !== 0 && y !== 0) {
-          x *= 0.71;
-          y *= 0.71;
-        }
-
-        deltaRoll = y * passed * 2 * Math.PI * ROLL_SPEED;
-        deltaSpin = x * passed * 2 * Math.PI * SPIN_SPEED;
-        deltaDistance = distanceUpdate * passed * ZOOM_SPEED;
-      }
-
-      const mouseDrag = mouseDragRef.current;
-
-      if (mouseDrag.x || mouseDrag.y) {
-        const distanceModifier = directionState.distance / 12;
-        deltaRoll -= mouseDrag.y * MOUSE_DRAG_ROLL_SPEED * distanceModifier;
-        deltaSpin -= mouseDrag.x * MOUSE_DRAG_SPIN_SPEED * distanceModifier;
-
-        mouseDrag.x = 0;
-        mouseDrag.y = 0;
       }
     } else {
       introAnimation.current?.update();
@@ -279,7 +304,7 @@ export function Game() {
           countriesState: getCountryStates(innerGameStateRef.current),
         };
 
-        console.log('CountriesState =', gameStateRef.current.countriesState);
+        // console.log('CountriesState =', gameStateRef.current.countriesState);
 
         lastProcessedInnerGameStateRef.current = innerGameStateRef.current;
       }
@@ -544,85 +569,110 @@ export function Game() {
             !innerGameState.successCountryIds.includes(selectedCountryId) &&
             !innerGameState.failedCountryIds.includes(selectedCountryId)
           ) {
-            innerGameStateRef.current = {
-              ...innerGameStateRef.current,
-              selectedCountryId: undefined,
-              failedCountryIds: [
-                ...innerGameStateRef.current.failedCountryIds,
-                originalGuessCountry.id,
-              ],
-            };
-
             gameStateRef.current = {
               ...gameStateRef.current,
               inGameState: InGameState.SWITCHING,
             };
             rerender();
 
-            if (innerGameStateRef.current.failedCountryIds.length < WARMING_TRIES_COUNT) {
-              showSplashText(
-                <p>
-                  You get wrong
-                  <br />
-                  {originalGuessCountry.title} is burned
-                </p>,
-                {
-                  type: SplashStyle.SMALL_BAD,
-                  timeout: 3000,
-                },
-              );
-              // TODO: Spin with animation
-              directionState.direction = {
-                roll: -originalGuessCountry.center[0],
-                spin: originalGuessCountry.center[1],
-              };
-              await wait(3000);
+            const from = directionState.direction;
+            const to = {
+              roll: -originalGuessCountry.center[0],
+              spin: originalGuessCountry.center[1],
+            };
+            const by = getNearestRotation({
+              from,
+              to,
+            });
 
-              gameStateRef.current = {
-                ...gameStateRef.current,
-                guessCountry: undefined,
-              };
-              rerender();
+            const l = Math.sqrt(Math.abs(by.roll) ** 2 + Math.abs(by.spin) ** 2);
 
-              await wait(100);
+            disableUserRotationRef.current = true;
+            rotationAnimationRef.current = {
+              startTs: Date.now(),
+              duration: 1500 * l,
+              onTick: (ratio) => {
+                const r = easeInOutQuad(ratio);
 
-              alreadyGuessedCountriesRef.current.push(originalGuessCountry.id);
+                updateDirection(({distance}) => ({
+                  direction: {
+                    spin: from.spin + by.spin * r,
+                    roll: from.roll + by.roll * r,
+                  },
+                  distance,
+                }));
+              },
+              onDone: async () => {
+                disableUserRotationRef.current = false;
 
-              gameStateRef.current = {
-                ...gameStateRef.current,
-                inGameState: InGameState.FINDING,
-              };
-              chooseNextCountry();
-            } else {
-              innerGameStateRef.current = {
-                ...innerGameStateRef.current,
-                selectedCountryId: undefined,
-              };
+                if (gameStateRef.current.type !== GameType.GAME) {
+                  return;
+                }
 
-              gameStateRef.current = {
-                ...gameStateRef.current,
-                guessCountry: undefined,
-              };
+                innerGameStateRef.current = {
+                  ...innerGameStateRef.current,
+                  selectedCountryId: undefined,
+                  failedCountryIds: [
+                    ...innerGameStateRef.current.failedCountryIds,
+                    originalGuessCountry.id,
+                  ],
+                };
 
-              showBlockText(
-                <p>
-                  It was your last try
-                  <br />
-                  Game Over
-                </p>,
-                {
-                  type: SplashStyle.BAD,
-                  timeout: 3000,
-                },
-                () => {
+                updateDirection(({distance}) => ({
+                  direction: to,
+                  distance,
+                }));
+
+                gameStateRef.current = {
+                  ...gameStateRef.current,
+                  guessCountry: undefined,
+                };
+                rerender();
+
+                if (innerGameStateRef.current.failedCountryIds.length >= WARMING_TRIES_COUNT) {
+                  showBlockText(
+                    <p>
+                      It was your last try
+                      <br />
+                      Game Over
+                    </p>,
+                    {
+                      type: SplashStyle.BAD,
+                      timeout: 3000,
+                    },
+                    () => {
+                      gameStateRef.current = {
+                        type: GameType.MENU,
+                        countriesState: gameStateRef.current.countriesState,
+                      };
+                      rerender();
+                    },
+                  );
+                } else {
+                  showSplashText(
+                    <p>
+                      You get wrong
+                      <br />
+                      {originalGuessCountry.title} is burned
+                    </p>,
+                    {
+                      type: SplashStyle.SMALL_BAD,
+                      timeout: 3000,
+                    },
+                  );
+
+                  await wait(1500);
+
+                  alreadyGuessedCountriesRef.current.push(originalGuessCountry.id);
+
                   gameStateRef.current = {
-                    type: GameType.MENU,
-                    countriesState: gameStateRef.current.countriesState,
+                    ...gameStateRef.current,
+                    inGameState: InGameState.FINDING,
                   };
-                  rerender();
-                },
-              );
-            }
+                  chooseNextCountry();
+                }
+              },
+            };
           }
         }
         break;
