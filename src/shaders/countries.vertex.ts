@@ -1,8 +1,7 @@
 import type {VertexShaderInfo} from '../utils/types';
 
 export const countriesVertexShaderInfo: VertexShaderInfo = {
-  source: `#version 300 es
-
+  source: `
 in vec4 a_position;
 in vec2 a_texcoord;
 in vec4 a_color;

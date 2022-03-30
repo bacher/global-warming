@@ -37,9 +37,10 @@ export type ShaderProgram = {
 };
 
 export type VaoObject = {
-  vao: WebGLVertexArrayObject;
+  // vao: WebGLVertexArrayObject;
   // positionBuffer: WebGLBuffer;
   // uvBuffer: WebGLBuffer | undefined;
+  activate: () => void;
 };
 
 export enum CullFace {

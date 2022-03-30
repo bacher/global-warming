@@ -55,9 +55,26 @@ function createShaderProgram(
   vertexShaderInfo: VertexShaderInfo,
   fragmentShaderInfo: FragmentShaderInfo,
 ): ShaderProgram {
-  const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderInfo.source);
+  let vertexShaderSource: string;
+  let fragmentShaderSource: string;
 
-  const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderInfo.source);
+  if (gl.isWebGL2) {
+    vertexShaderSource = `#version 300 es\n${vertexShaderInfo.source}`;
+    fragmentShaderSource = `#version 300 es\n${fragmentShaderInfo.source}`;
+  } else {
+    vertexShaderSource = vertexShaderInfo.source
+      .replace(/\bin\b/g, 'attribute')
+      .replace(/\bout\b/g, 'varying');
+    fragmentShaderSource = fragmentShaderInfo.source
+      .replace(/\bin\b/g, 'varying')
+      .replace('out vec4 out_color;', '')
+      .replace(/\bout_color\b/g, 'gl_FragColor')
+      .replace(/\btexture\(/g, 'texture2D(');
+  }
+
+  const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+
+  const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
 
   const program = gl.createProgram();
 
@@ -250,7 +267,7 @@ function createTexture(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-  if (mipmap) {
+  if (mipmap && gl.isWebGL2) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   } else {
@@ -264,7 +281,7 @@ function createTexture(
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, textureImage);
   }
 
-  if (mipmap) {
+  if (mipmap && gl.isWebGL2) {
     gl.generateMipmap(gl.TEXTURE_2D);
   }
 
@@ -291,8 +308,7 @@ function createEmptyTexture(
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, null);
   }
 
-  // TODO: HOW TO ADD MIPMAP?
-  if (mipmap) {
+  if (mipmap && gl.isWebGL2) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
   } else {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -301,7 +317,7 @@ function createEmptyTexture(
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-  if (mipmap) {
+  if (mipmap && gl.isWebGL2) {
     gl.generateMipmap(gl.TEXTURE_2D);
   }
 
@@ -341,24 +357,41 @@ export function createVao(
     attributes: AttributesInfo[];
   },
 ): VaoObject {
-  const vao = gl.createVertexArray();
-  if (!vao) {
-    throw new Error('Cant create VAO');
+  if (gl.isWebGL2) {
+    const vao = gl.createVertexArray();
+    if (!vao) {
+      throw new Error('Cant create VAO');
+    }
+
+    gl.bindVertexArray(vao);
+
+    for (const {location, buffer, iterationSize, normalized} of attributes) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.enableVertexAttribArray(location);
+      gl.vertexAttribPointer(location, iterationSize, gl.FLOAT, Boolean(normalized), 0, 0);
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+    return {
+      // vao,
+      activate: () => {
+        gl.bindVertexArray(vao);
+      },
+    };
+  } else {
+    return {
+      activate: () => {
+        for (const {location, buffer, iterationSize, normalized} of attributes) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+          gl.enableVertexAttribArray(location);
+          gl.vertexAttribPointer(location, iterationSize, gl.FLOAT, Boolean(normalized), 0, 0);
+        }
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      },
+    };
   }
-
-  gl.bindVertexArray(vao);
-
-  for (const {location, buffer, iterationSize, normalized} of attributes) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.enableVertexAttribArray(location);
-    gl.vertexAttribPointer(location, iterationSize, gl.FLOAT, Boolean(normalized), 0, 0);
-  }
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-  return {
-    vao,
-  };
 }
 
 export function initialize(gl: WebGL2RenderingContext, {models, textures}: Assets): Scene {

@@ -2,7 +2,7 @@ import {mat4} from 'gl-matrix';
 
 import {TEXTURE_SIZE} from '../data/textures';
 import type {GameState, Scene, ShaderProgram, Shaders} from './types';
-import {CullFace, GameType, ObjectType, ViewportSize} from './types';
+import {CullFace, GameType, ObjectType, VaoObject, ViewportSize} from './types';
 import {BlendMode, RenderType} from './modelTypes';
 import {countries} from '../data/countries';
 
@@ -34,7 +34,7 @@ const current: {
   frameBuffer: WebGLFramebuffer | undefined;
   viewport: ViewportSize;
   shader: WebGLProgram | undefined;
-  vao: WebGLVertexArrayObject | undefined;
+  vao: VaoObject | undefined;
   isCullFaceEnabled: boolean;
   cullFace: CullFace;
   depthTest: boolean | undefined;
@@ -96,9 +96,11 @@ export function draw(
     }
   }
 
-  function setVao(vao: WebGLVertexArrayObject | undefined) {
+  function setVao(vao: VaoObject | undefined) {
     if (current.vao !== vao) {
-      gl.bindVertexArray(vao ?? null);
+      if (vao) {
+        vao.activate();
+      }
       current.vao = vao;
     }
   }
@@ -215,7 +217,7 @@ export function draw(
 
       const shader = chooseShader(shaders, obj.objectType);
       setShaderProgram(shader);
-      setVao(obj.vao.vao);
+      setVao(obj.vao);
       setCullFace(obj.cullFace ?? CullFace.BACK);
       setDepthTest(!obj.disableDepthTest);
       setBlendMode(obj.blendMode ?? BlendMode.OFF);
@@ -266,7 +268,7 @@ export function draw(
 
     const shader = chooseShader(shaders, obj.objectType);
     setShaderProgram(shader);
-    setVao(obj.vao.vao);
+    setVao(obj.vao);
     setCullFace(obj.cullFace ?? CullFace.BACK);
     setDepthTest(!obj.disableDepthTest);
     setBlendMode(obj.blendMode ?? BlendMode.OFF);

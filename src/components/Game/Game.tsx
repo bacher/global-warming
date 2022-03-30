@@ -40,6 +40,12 @@ const MOUSE_DRAG_ROLL_SPEED = 0.001;
 
 const WARMING_TRIES_COUNT = 3;
 
+declare global {
+  interface WebGL2RenderingContext {
+    isWebGL2: boolean;
+  }
+}
+
 function radToDeg(rad: number) {
   return (180 * rad) / Math.PI;
 }
@@ -275,7 +281,18 @@ export function Game() {
       throw new Error();
     }
 
-    const gl = canvas.getContext('webgl2', {preserveDrawingBuffer: true});
+    // const gl2 =
+    //   Math.random() < 0 ? canvas.getContext('webgl2', {preserveDrawingBuffer: true}) : null;
+    const gl2 = canvas.getContext('webgl2', {preserveDrawingBuffer: true});
+    let glFallback;
+
+    if (gl2) {
+      gl2.isWebGL2 = true;
+    } else {
+      glFallback = canvas.getContext('webgl', {preserveDrawingBuffer: true});
+    }
+
+    const gl = (gl2 ?? glFallback) as WebGL2RenderingContext;
 
     if (!gl) {
       throw new Error();

@@ -1,8 +1,7 @@
 import type {VertexShaderInfo} from '../utils/types';
 
 export const matrixVertexShaderInfo: VertexShaderInfo = {
-  source: `#version 300 es
-
+  source: `
 uniform mat4 u_matrix;
 in vec4 a_position;
 in vec2 a_texcoord;
