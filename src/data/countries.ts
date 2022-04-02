@@ -326,7 +326,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     Country.NORTH_MACEDONIA,
     {
       color: 0xda,
-      title: 'Albania',
+      title: 'North Macedonia',
       center: [0.73, 0.35],
       tags: [Tag.Europa],
     },
@@ -479,7 +479,7 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     Country.OMAN,
     {
       color: 0xe0,
-      title: 'Yemen',
+      title: 'Oman',
       center: [0.3, 0.95],
       tags: [],
     },
