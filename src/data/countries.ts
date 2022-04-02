@@ -1,6 +1,6 @@
 import atlas from './atlas.json';
 
-export enum Country {
+export const enum Country {
   ITALY = 1,
   FRANCE,
   BELGIUM,
@@ -26,6 +26,10 @@ export enum Country {
   INDIA,
   BANGLADESH,
   RUSSIA,
+  SAUDI_ARABIA,
+  YEMEN,
+  OMAN,
+  UNITED_ARAB_EMIRATES,
 }
 
 enum Tag {
@@ -290,6 +294,42 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
       color: 0xf7, // 0xf6
       title: 'Russia',
       center: [1.08, 1.53],
+      tags: [],
+    },
+  ],
+  [
+    Country.SAUDI_ARABIA,
+    {
+      color: 0x92,
+      title: 'Saudi Arabia',
+      center: [0.39, 0.71],
+      tags: [],
+    },
+  ],
+  [
+    Country.YEMEN,
+    {
+      color: 0x63,
+      title: 'Yemen',
+      center: [0.25, 0.76],
+      tags: [],
+    },
+  ],
+  [
+    Country.OMAN,
+    {
+      color: 0xe0,
+      title: 'Yemen',
+      center: [0.3, 0.95],
+      tags: [],
+    },
+  ],
+  [
+    Country.UNITED_ARAB_EMIRATES,
+    {
+      color: 0x2a,
+      title: 'United Arab Emirates',
+      center: [0.36, 0.92],
       tags: [],
     },
   ],
