@@ -19,13 +19,29 @@ export const enum Country {
   DENMARK,
   SPAIN,
   PORTUGAL,
+  ESTONIA,
+  LATVIA,
+  LITHUANIAN,
+  GREECE,
+  ROMANIA,
+  BULGARIA,
   CROATIA,
   BOSNIA_AND_HERZEGOVINA,
   SERBIA,
+  ALBANIA,
+  NORTH_MACEDONIA,
+  MONTENEGRO,
+  TURKEY,
   AUSTRALIA,
   INDIA,
   BANGLADESH,
+  BELARUS,
+  UKRAINE,
+  MOLDOVA,
   RUSSIA,
+  GEORGIA,
+  ARMENIA,
+  AZERBAIJAN,
   SAUDI_ARABIA,
   YEMEN,
   OMAN,
@@ -235,6 +251,42 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     },
   ],
   [
+    Country.ESTONIA,
+    {
+      color: 0xc5,
+      title: 'ESTONIA',
+      center: [1.1, 0.5],
+      tags: [Tag.Europa, Tag.EuroUnion],
+    },
+  ],
+  [
+    Country.LATVIA,
+    {
+      color: 0x8e,
+      title: 'Latvia',
+      center: [1.07, 0.46],
+      tags: [Tag.Europa, Tag.EuroUnion],
+    },
+  ],
+  [
+    Country.LITHUANIAN,
+    {
+      color: 0x31,
+      title: 'Lithuania',
+      center: [1.04, 0.44],
+      tags: [Tag.Europa, Tag.EuroUnion],
+    },
+  ],
+  [
+    Country.GREECE,
+    {
+      color: 0x5d,
+      title: 'Greece',
+      center: [0.66, 0.35],
+      tags: [Tag.Europa, Tag.EuroUnion],
+    },
+  ],
+  [
     Country.CROATIA,
     {
       color: 0x49,
@@ -259,6 +311,42 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
       title: 'Serbia',
       center: [0.79, 0.34],
       tags: [Tag.Europa],
+    },
+  ],
+  [
+    Country.ALBANIA,
+    {
+      color: 0xa7,
+      title: 'Albania',
+      center: [0.72, 0.31],
+      tags: [Tag.Europa],
+    },
+  ],
+  [
+    Country.NORTH_MACEDONIA,
+    {
+      color: 0xda,
+      title: 'Albania',
+      center: [0.73, 0.35],
+      tags: [Tag.Europa],
+    },
+  ],
+  [
+    Country.MONTENEGRO,
+    {
+      color: 0x55,
+      title: 'Montenegro',
+      center: [0.76, 0.3],
+      tags: [Tag.Europa],
+    },
+  ],
+  [
+    Country.TURKEY,
+    {
+      color: 0x3a,
+      title: 'Turkey',
+      center: [0.68, 0.57],
+      tags: [],
     },
   ],
   [
@@ -289,11 +377,83 @@ const countriesInitial: Map<Country, CountryDetails> = new Map([
     },
   ],
   [
+    Country.BELARUS,
+    {
+      color: 0x65,
+      title: 'Belarus',
+      center: [0.98, 0.49],
+      tags: [],
+    },
+  ],
+  [
+    Country.UKRAINE,
+    {
+      color: 0x1c,
+      title: 'Ukraine',
+      center: [0.89, 0.53],
+      tags: [],
+    },
+  ],
+  [
+    Country.MOLDOVA,
+    {
+      color: 0x58,
+      title: 'Moldova',
+      center: [0.86, 0.48],
+      tags: [],
+    },
+  ],
+  [
+    Country.ROMANIA,
+    {
+      color: 0xb3,
+      title: 'Romania',
+      center: [0.86, 0.48], // FIX
+      tags: [],
+    },
+  ],
+  [
+    Country.BULGARIA,
+    {
+      color: 0x6c,
+      title: 'Bulgaria',
+      center: [0.86, 0.48], // FIX
+      tags: [],
+    },
+  ],
+  [
     Country.RUSSIA,
     {
       color: 0xf7, // 0xf6
       title: 'Russia',
       center: [1.08, 1.53],
+      tags: [],
+    },
+  ],
+  [
+    Country.GEORGIA,
+    {
+      color: 0x89,
+      title: 'Georgia',
+      center: [0.75, 0.73],
+      tags: [],
+    },
+  ],
+  [
+    Country.ARMENIA,
+    {
+      color: 0x75,
+      title: 'Armenia',
+      center: [0.71, 0.76],
+      tags: [],
+    },
+  ],
+  [
+    Country.AZERBAIJAN,
+    {
+      color: 0xbf,
+      title: 'Azerbaijan',
+      center: [0.71, 0.8],
       tags: [],
     },
   ],

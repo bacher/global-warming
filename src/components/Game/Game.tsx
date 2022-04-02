@@ -74,6 +74,13 @@ type RotationAnimation = {
   onDone?: () => void;
 };
 
+type MouseDragState = {
+  x: number;
+  y: number;
+  startTs: number;
+  isRealDragging: boolean;
+};
+
 export function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -82,7 +89,7 @@ export function Game() {
   const {fpsCounterRef, tick} = useFpsCounter();
   const mousePosRef = useRef<{x: number; y: number} | undefined>();
   const pressedMap = useMemo<Set<string>>(() => new Set(), []);
-  const mouseDragRef = useRef({x: 0, y: 0, isRealDragging: false});
+  const mouseDragRef = useRef<MouseDragState | undefined>();
   const directionState = useMemo<DirectionState>(
     () => ({
       direction: {spin: 0.51, roll: -0.75},
@@ -209,7 +216,7 @@ export function Game() {
 
         const mouseDrag = mouseDragRef.current;
 
-        if (mouseDrag.x || mouseDrag.y) {
+        if (mouseDrag && (mouseDrag.x || mouseDrag.y)) {
           const distanceModifier = directionState.distance / 12;
           deltaRoll -= mouseDrag.y * MOUSE_DRAG_ROLL_SPEED * distanceModifier;
           deltaSpin -= mouseDrag.x * MOUSE_DRAG_SPIN_SPEED * distanceModifier;
@@ -534,9 +541,11 @@ export function Game() {
   const handleCanvasClick = useHandler(async (event) => {
     event.preventDefault();
 
-    if (mouseDragRef.current.isRealDragging) {
+    if (mouseDragRef.current?.isRealDragging) {
       return;
     }
+
+    console.log('HANDLE CLICK');
 
     const innerGameState = innerGameStateRef.current;
     const selectedCountryId = innerGameState.selectedCountryId;
@@ -719,27 +728,31 @@ export function Game() {
     mouseDragRef.current = {
       x: 0,
       y: 0,
+      startTs: Date.now(),
       isRealDragging: false,
     };
     setDragging(true);
   });
 
   const onMouseMove = useHandler((event) => {
-    mouseDragRef.current.x += event.movementX;
-    mouseDragRef.current.y += event.movementY;
+    const mouseDrag = mouseDragRef.current;
 
-    if (
-      !mouseDragRef.current.isRealDragging &&
-      (Math.abs(mouseDragRef.current.x) > 3 || Math.abs(mouseDragRef.current.y) > 3)
-    ) {
-      mouseDragRef.current.isRealDragging = true;
+    if (mouseDrag) {
+      mouseDrag.x += event.movementX;
+      mouseDrag.y += event.movementY;
+
+      if (!mouseDrag.isRealDragging) {
+        if (Date.now() - mouseDrag.startTs > 300 || mouseDrag.x ** 2 + mouseDrag.y ** 2 >= 9) {
+          mouseDrag.isRealDragging = true;
+        }
+      }
     }
   });
 
   useWindowEvent(
     'mouseup',
     (event) => {
-      if (mouseDragRef.current.isRealDragging) {
+      if (mouseDragRef.current?.isRealDragging) {
         event.preventDefault();
       }
       setDragging(false);
