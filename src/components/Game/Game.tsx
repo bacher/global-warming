@@ -328,8 +328,6 @@ export function Game() {
           countriesState: getCountryStates(innerGameStateRef.current),
         };
 
-        // console.log('CountriesState =', gameStateRef.current.countriesState);
-
         lastProcessedInnerGameStateRef.current = innerGameStateRef.current;
       }
 
@@ -545,8 +543,6 @@ export function Game() {
       return;
     }
 
-    console.log('HANDLE CLICK');
-
     const innerGameState = innerGameStateRef.current;
     const selectedCountryId = innerGameState.selectedCountryId;
 
@@ -655,6 +651,20 @@ export function Game() {
                 };
                 rerender();
 
+                showSplashText(
+                  <p>
+                    You get wrong
+                    <br />
+                    {originalGuessCountry.title} is burned
+                  </p>,
+                  {
+                    type: SplashStyle.SMALL_BAD,
+                    timeout: 3000,
+                  },
+                );
+
+                await wait(1500);
+
                 if (innerGameStateRef.current.failedCountryIds.length >= WARMING_TRIES_COUNT) {
                   showBlockText(
                     <p>
@@ -675,20 +685,6 @@ export function Game() {
                     },
                   );
                 } else {
-                  showSplashText(
-                    <p>
-                      You get wrong
-                      <br />
-                      {originalGuessCountry.title} is burned
-                    </p>,
-                    {
-                      type: SplashStyle.SMALL_BAD,
-                      timeout: 3000,
-                    },
-                  );
-
-                  await wait(1500);
-
                   alreadyGuessedCountriesRef.current.push(originalGuessCountry.id);
 
                   gameStateRef.current = {
