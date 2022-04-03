@@ -109,6 +109,9 @@ export type Direction = {
 
 export type DirectionState = {
   direction: Direction;
+};
+
+export type DistanceState = {
   distance: number;
 };
 

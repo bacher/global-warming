@@ -7,7 +7,7 @@ import {initialize} from '../../utils/init';
 import {compareDrawParams, draw, DrawParams} from '../../utils/render';
 import {Assets, loadAssets} from '../../utils/loader';
 import {makeMemorizedGetSelectedCountry} from '../../utils/debug';
-import type {DirectionState, GameState, ViewportSize} from '../../utils/types';
+import type {DirectionState, DistanceState, GameState, ViewportSize} from '../../utils/types';
 import {GameType, InGameState} from '../../utils/types';
 import {bound} from '../../utils/math';
 import {formatNumber} from '../../utils/format';
@@ -17,7 +17,12 @@ import {useHandler} from '../../hooks/useHandler';
 import {SplashStyle, useSplash} from '../../hooks/useSplash';
 import {useWindowEvent} from '../../hooks/useWindowEvent';
 import {useRerender} from '../../hooks/useRerender';
-import {createIntroAnimation, IntroAnimation} from '../../utils/animations';
+import {
+  createIntroAnimation,
+  createSpring,
+  IntroAnimation,
+  SpringAnimation,
+} from '../../utils/animations';
 import {StartMenu} from '../StartMenu';
 import {CountriesCanvas} from '../CountriesCanvas';
 import {getCountryStates} from '../../utils/countryState';
@@ -51,14 +56,14 @@ function radToDeg(rad: number) {
   return (180 * rad) / Math.PI;
 }
 
-function printDirection(directionState: DirectionState): void {
+function printStats(directionState: DirectionState, {distance}: DistanceState): void {
   const {roll, spin} = directionState.direction;
 
   const outputElement = document.getElementById('output');
   if (outputElement) {
     outputElement.innerText = `Lat: ${formatNumber(radToDeg(-roll))}° ${formatNumber(-roll)}rad
 Lng: ${formatNumber(radToDeg(spin))}° ${formatNumber(spin)}rad
-Distance: ${formatNumber(directionState.distance, 0)}`;
+Distance: ${formatNumber(distance, 0)}`;
   }
 }
 
@@ -94,10 +99,11 @@ export function Game() {
   const directionState = useMemo<DirectionState>(
     () => ({
       direction: {spin: 0.51, roll: -0.75},
-      distance: 1000,
     }),
     [],
   );
+  const distanceState = useMemo<DistanceState>(() => ({distance: 1000}), []);
+  const distanceSpringRef = useRef<SpringAnimation | undefined>();
   const disableUserRotationRef = useRef(false);
   const rotationAnimationRef = useRef<RotationAnimation | undefined>();
   const lastApplyTsRef = useRef<number | undefined>();
@@ -138,25 +144,31 @@ export function Game() {
 
     loadAssets().then(setAssets);
 
-    printDirection(directionState);
+    printStats(directionState, distanceState);
   }, []);
 
   function updateDirection(callback: (state: DirectionState) => DirectionState) {
-    const {direction, distance} = callback(directionState);
+    const {direction} = callback(directionState);
 
     const max = Math.PI * 0.44444;
     directionState.direction = {
       roll: bound(direction.roll, -max, max),
       spin: direction.spin,
     };
+  }
 
-    if (distance !== directionState.distance) {
-      directionState.distance = bound(distance, MINIMAL_DISTANCE, MAXIMUM_DISTANCE);
-    }
+  function boundDistance(distance: number) {
+    return bound(distance, MINIMAL_DISTANCE, MAXIMUM_DISTANCE);
   }
 
   function updateGameState(): void {
     const now = Date.now();
+    let passed = 0;
+
+    if (lastApplyTsRef.current) {
+      passed = (now - lastApplyTsRef.current) / 1000;
+    }
+    lastApplyTsRef.current = now;
 
     if (rotationAnimationRef.current) {
       const {startTs, duration, onTick, onDone} = rotationAnimationRef.current;
@@ -176,9 +188,7 @@ export function Game() {
 
     if (isInGame()) {
       if (!disableUserRotationRef.current) {
-        if (lastApplyTsRef.current) {
-          const passed = (now - lastApplyTsRef.current) / 1000;
-
+        if (passed) {
           let x = 0;
           let y = 0;
           let distanceUpdate = 0;
@@ -220,7 +230,7 @@ export function Game() {
         const mouseDrag = mouseDragRef.current;
 
         if (mouseDrag && (mouseDrag.x || mouseDrag.y)) {
-          const distanceModifier = directionState.distance / 12;
+          const distanceModifier = distanceState.distance / 12;
           deltaRoll -= mouseDrag.y * MOUSE_DRAG_ROLL_SPEED * distanceModifier;
           deltaSpin -= mouseDrag.x * MOUSE_DRAG_SPIN_SPEED * distanceModifier;
 
@@ -231,25 +241,33 @@ export function Game() {
     } else {
       introAnimation.current?.update();
 
-      if (lastApplyTsRef.current) {
-        const passed = (now - lastApplyTsRef.current) / 1000;
+      if (passed) {
         deltaSpin = MENU_SPIN_SPEED * passed * 2 * Math.PI * SPIN_SPEED;
       }
     }
 
     if (deltaRoll || deltaSpin || deltaDistance) {
-      updateDirection(({direction: {spin, roll}, distance}) => ({
-        direction: {
-          spin: spin + deltaSpin,
-          roll: roll + deltaRoll,
-        },
-        distance: distance + deltaDistance,
-      }));
+      if (deltaRoll || deltaSpin) {
+        updateDirection(({direction: {spin, roll}}) => ({
+          direction: {
+            spin: spin + deltaSpin,
+            roll: roll + deltaRoll,
+          },
+        }));
+      }
 
-      printDirection(directionState);
+      if (deltaDistance && distanceSpringRef.current) {
+        distanceSpringRef.current.target = boundDistance(
+          distanceSpringRef.current.target + deltaDistance,
+        );
+      }
+
+      printStats(directionState, distanceState);
     }
 
-    lastApplyTsRef.current = now;
+    if (distanceSpringRef.current) {
+      distanceState.distance = distanceSpringRef.current.update(passed);
+    }
   }
 
   function updateCanvasSize(): ViewportSize {
@@ -336,7 +354,7 @@ export function Game() {
         width: viewportSize.width,
         height: viewportSize.height,
         direction: directionState.direction,
-        distance: directionState.distance,
+        distance: distanceState.distance,
         gameState: gameStateRef.current,
       };
 
@@ -381,8 +399,18 @@ export function Game() {
 
     doRender();
 
-    introAnimation.current = createIntroAnimation(directionState, () => {
+    introAnimation.current = createIntroAnimation(distanceState, () => {
       introAnimation.current = undefined;
+
+      distanceSpringRef.current = createSpring({
+        value: distanceState.distance,
+        stiffness: 100,
+        damping: 50,
+        mass: 6,
+        r: 2,
+        multiplier: 100,
+      });
+
       rerender();
     });
 
@@ -617,12 +645,11 @@ export function Game() {
               onTick: (ratio) => {
                 const r = easeInOutQuad(ratio);
 
-                updateDirection(({distance}) => ({
+                updateDirection(() => ({
                   direction: {
                     spin: from.spin + by.spin * r,
                     roll: from.roll + by.roll * r,
                   },
-                  distance,
                 }));
               },
               onDone: async () => {
@@ -641,9 +668,8 @@ export function Game() {
                   ],
                 };
 
-                updateDirection(({distance}) => ({
+                updateDirection(() => ({
                   direction: to,
-                  distance,
                 }));
 
                 gameStateRef.current = {
@@ -867,10 +893,16 @@ export function Game() {
             {isInGame() && (
               <RightPanel
                 onZoomIn={() => {
-                  updateDirection(({distance, ...rest}) => ({...rest, distance: distance - 1}));
+                  const distanceSpring = distanceSpringRef.current;
+                  if (distanceSpring) {
+                    distanceSpring.target = boundDistance(distanceSpring.target - 1);
+                  }
                 }}
                 onZoomOut={() => {
-                  updateDirection(({distance, ...rest}) => ({...rest, distance: distance + 1}));
+                  const distanceSpring = distanceSpringRef.current;
+                  if (distanceSpring) {
+                    distanceSpring.target = boundDistance(distanceSpring.target + 1);
+                  }
                 }}
               />
             )}
