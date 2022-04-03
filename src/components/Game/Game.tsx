@@ -18,14 +18,15 @@ import {SplashStyle, useSplash} from '../../hooks/useSplash';
 import {useWindowEvent} from '../../hooks/useWindowEvent';
 import {useRerender} from '../../hooks/useRerender';
 import {createIntroAnimation, IntroAnimation} from '../../utils/animations';
-
 import {StartMenu} from '../StartMenu';
 import {CountriesCanvas} from '../CountriesCanvas';
-import styles from './Game.module.scss';
 import {getCountryStates} from '../../utils/countryState';
 import {wait} from '../../utils/time';
 import {getNearestRotation} from '../../utils/rotation';
 import {easeInOutQuad} from '../../utils/easing';
+import {RightPanel} from '../RightPanel';
+
+import styles from './Game.module.scss';
 
 const SPIN_SPEED = 0.16;
 const ROLL_SPEED = 0.14;
@@ -149,7 +150,9 @@ export function Game() {
       spin: direction.spin,
     };
 
-    directionState.distance = distance;
+    if (distance !== directionState.distance) {
+      directionState.distance = bound(distance, MINIMAL_DISTANCE, MAXIMUM_DISTANCE);
+    }
   }
 
   function updateGameState(): void {
@@ -240,9 +243,7 @@ export function Game() {
           spin: spin + deltaSpin,
           roll: roll + deltaRoll,
         },
-        distance: deltaDistance
-          ? bound(distance + deltaDistance, MINIMAL_DISTANCE, MAXIMUM_DISTANCE)
-          : distance,
+        distance: distance + deltaDistance,
       }));
 
       printDirection(directionState);
@@ -863,6 +864,16 @@ export function Game() {
                   return undefined;
               }
             })()}
+            {isInGame() && (
+              <RightPanel
+                onZoomIn={() => {
+                  updateDirection(({distance, ...rest}) => ({...rest, distance: distance - 1}));
+                }}
+                onZoomOut={() => {
+                  updateDirection(({distance, ...rest}) => ({...rest, distance: distance + 1}));
+                }}
+              />
+            )}
           </div>
         </div>
         {showDebugCanvas && (

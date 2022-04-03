@@ -1,0 +1,47 @@
+.rightPanel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  bottom: 10%;
+  right: 0;
+  padding: 10px;
+  animation: fromRight 0.25s ease-out;
+}
+
+@keyframes fromRight {
+  from {
+    transform: translate(100%, 0);
+  }
+  to {
+    transform: translate(0, 0);
+  }
+}
+
+.zoom {
+  display: flex;
+  flex-direction: column;
+  pointer-events: initial;
+}
+
+.zoomButton {
+  width: 48px;
+  height: 48px;
+  border: 1px solid #b2d2ff;
+  border-radius: 50%;
+  background: #9effc9;
+  font-size: 30px;
+  appearance: none;
+  cursor: pointer;
+
+  &:not(:last-child) {
+    margin-bottom: 10px;
+  }
+
+  &:hover {
+    background: #c1ffdd;
+  }
+
+  &:active {
+    background: #64ffa6;
+  }
+}
